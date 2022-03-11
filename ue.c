@@ -133,56 +133,6 @@ static void sigwinch_handler(int s)
 #define clrscr()     printf("\033[2J")
 
 
-void output(void)
-/* paint the document to the screen */
-{
-    gotoxy(0, 0);
-
-    /* new file? say it */
-    if (ue.new_file) {
-        printf("<new file>");
-        ue.new_file = 0;
-    }
-    else {
-        printf("cpos: %d size: %d", ue.cpos, ue.size);
-        clreol();
-    }
-
-    fflush(stdout);
-}
-
-
-#define ctrl(k) ((k) & 31)
-
-int input(void)
-/* processes keys */
-{
-    char *key;
-    int running = 1;
-
-    key = read_string();
-
-    switch (key[0]) {
-    case ctrl('q'):
-        /* quit and save the unmodified document to .ue.saved */
-//        if (ue.modified)
-//            save_file(".ue.saved");
-
-        /* fall to ctrl-z */
-
-    case ctrl('z'):
-        /* force quit */
-        running = 0;
-        break;
-
-    default:
-        break;
-    }
-
-    return running;
-}
-
-
 int utf8_to_cpoint(uint32_t *cpoint, int *s, char c)
 /* reads an utf-8 stream and decodes the codepoint */
 {
@@ -260,6 +210,87 @@ int load_file(char *fname)
     }
 
     return ret;
+}
+
+
+void save_file(void)
+/* saves the file */
+{
+    FILE *f;
+
+    if ((f = fopen(ue.fname, "wb")) != NULL) {
+        int n;
+
+        for (n = 0; n < ue.size; n++) {
+            int c = ue.data[n];
+
+            /* special cases */
+            if (c == 0xac)  /* not sign is the m-dash */
+                fwrite("\xe2\x80\x94", 1, 3, f);
+            else
+            if (c == 0xa4)  /* broken characters are the replacement character */
+                fwrite("\xef\xbf\xbd", 1, 3, f);
+            else
+            if (c > 0x7f) { /* iso8859-1 character */
+                fputc(0xc0 | (c >> 6),   f);
+                fputc(0x80 | (c & 0x3f), f);
+            }
+            else
+                fputc(c, f);
+        }
+
+        fclose(f);
+    }
+}
+
+
+void output(void)
+/* paint the document to the screen */
+{
+    gotoxy(0, 0);
+
+    /* new file? say it */
+    if (ue.new_file) {
+        printf("<new file>");
+        ue.new_file = 0;
+    }
+    else {
+        printf("cpos: %d size: %d", ue.cpos, ue.size);
+        clreol();
+    }
+
+    fflush(stdout);
+}
+
+
+#define ctrl(k) ((k) & 31)
+
+int input(void)
+/* processes keys */
+{
+    char *key;
+    int running = 1;
+
+    key = read_string();
+
+    switch (key[0]) {
+    case ctrl('q'):
+        /* quit and save the unmodified document to .ue.saved */
+//        if (ue.modified)
+//            save_file(".ue.saved");
+
+        /* fall to ctrl-z */
+
+    case ctrl('z'):
+        /* force quit */
+        running = 0;
+        break;
+
+    default:
+        break;
+    }
+
+    return running;
 }
 
 
