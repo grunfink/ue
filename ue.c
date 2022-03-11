@@ -213,12 +213,12 @@ int load_file(char *fname)
 }
 
 
-void save_file(void)
+void save_file(char *fname)
 /* saves the file */
 {
     FILE *f;
 
-    if ((f = fopen(ue.fname, "wb")) != NULL) {
+    if ((f = fopen(fname, "wb")) != NULL) {
         int n;
 
         for (n = 0; n < ue.size; n++) {
@@ -274,10 +274,27 @@ int input(void)
     key = read_string();
 
     switch (key[0]) {
+    case ctrl('l'):
+        /* move right */
+        if (ue.cpos < ue.size)
+            ue.cpos++;
+        break;
+
+    case ctrl('h'):
+        /* move left */
+        if (ue.cpos > 0)
+            ue.cpos--;
+        break;
+
+    case ctrl('s'):
+        /* save file */
+        save_file(ue.fname);
+        break;
+
     case ctrl('q'):
         /* quit and save the unmodified document to .ue.saved */
-//        if (ue.modified)
-//            save_file(".ue.saved");
+        if (ue.modified)
+            save_file(".ue.saved");
 
         /* fall to ctrl-z */
 
