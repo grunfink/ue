@@ -9,11 +9,20 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include <sys/time.h>
+#include <stdint.h>
+
+#define DATA_SIZE 32000
 
 struct {
-    int width;              /* terminal width */
-    int height;             /* terminal height */
-    int sigwinch_received;  /* sigwinch received flag */
+    char *fname;                /* file name */
+    int width;                  /* terminal width */
+    int height;                 /* terminal height */
+    int sigwinch_received;      /* sigwinch-received flag */
+    int new_file;               /* file-is-new flag */
+    int modified;               /* modified-since-saving flag */
+    int cpos;                   /* cursor position */
+    int size;                   /* size of document */
+    uint8_t data[DATA_SIZE];    /* the document data */
 } ue;
 
 
@@ -124,21 +133,143 @@ static void sigwinch_handler(int s)
 #define clrscr()     printf("\033[2J")
 
 
-void paint(void)
+void output(void)
 /* paint the document to the screen */
 {
     gotoxy(0, 0);
-    printf("%d x %d", ue.width, ue.height);
+
+    /* new file? say it */
+    if (ue.new_file) {
+        printf("<new file>");
+        ue.new_file = 0;
+    }
+    else {
+        printf("cpos: %d size: %d", ue.cpos, ue.size);
+        clreol();
+    }
+
     fflush(stdout);
 }
 
 
 #define ctrl(k) ((k) & 31)
 
-void ue_main(char *fname)
+int input(void)
+/* processes keys */
+{
+    char *key;
+    int running = 1;
+
+    key = read_string();
+
+    switch (key[0]) {
+    case ctrl('q'):
+        /* quit and save the unmodified document to .ue.saved */
+//        if (ue.modified)
+//            save_file(".ue.saved");
+
+        /* fall to ctrl-z */
+
+    case ctrl('z'):
+        /* force quit */
+        running = 0;
+        break;
+
+    default:
+        break;
+    }
+
+    return running;
+}
+
+
+int utf8_to_cpoint(uint32_t *cpoint, int *s, char c)
+/* reads an utf-8 stream and decodes the codepoint */
+{
+    if (!*s && (c & 0x80) == 0) { /* 1 byte char */
+        *cpoint = c;
+    }
+    else
+    if (!*s && (c & 0xe0) == 0xc0) { /* 2 byte char */
+        *cpoint = (c & 0x1f) << 6; *s = 1;
+    }
+    else
+    if (!*s && (c & 0xf0) == 0xe0) { /* 3 byte char */
+        *cpoint = (c & 0x0f) << 12; *s = 2;
+    }
+    else
+    if (!*s && (c & 0xf8) == 0xf0) { /* 4 byte char */
+        *cpoint = (c & 0x07) << 18; *s = 3;
+    }
+    else
+    if (*s && (c & 0xc0) == 0x80) { /* continuation byte */
+        switch (*s) {
+        case 3: *cpoint |= (c & 0x3f) << 12; break;
+        case 2: *cpoint |= (c & 0x3f) << 6;  break;
+        case 1: *cpoint |= (c & 0x3f);       break;
+        }
+
+        (*s)--;
+    }
+    else {
+        *cpoint = L'\xfffd';
+        *s = 0;
+    }
+
+    return *s;
+}
+
+
+int load_file(char *fname)
+/* loads the file */
+{
+    FILE *f;
+    int ret = 0;
+
+    /* store file name */
+    ue.fname = fname;
+
+    if ((f = fopen(fname, "rb")) != NULL) {
+        int c;
+        uint32_t cpoint;
+        int ustate = 0;
+
+        while (ue.size < DATA_SIZE && (c = fgetc(f)) != EOF) {
+            /* keep decoding utf8 until a full codepoint is found */
+            if (utf8_to_cpoint(&cpoint, &ustate, c) == 0) {
+                /* treat special cases */
+                if (cpoint == 0x2014)
+                    cpoint = 0xac;      /* the m-dash is the not sign */
+                else
+                if (cpoint > 0xff)
+                    cpoint = 0xa4;      /* all above iso8859-1 is an error */
+
+                ue.data[ue.size++] = cpoint & 0xff;
+            }
+        }
+
+        fclose(f);
+    }
+    else
+        /* file is not (yet) on disk */
+        ue.new_file = 1;
+
+    if (ue.size == DATA_SIZE) {
+        printf("ERROR: file too big\n");
+        ret = 1;
+    }
+
+    return ret;
+}
+
+
+int ue_main(char *fname)
 /* edits the file */
 {
     struct termios tios;
+
+    if (load_file(fname))
+        goto end;
 
     /* startup */
     raw_tty(1, &tios);
@@ -147,23 +278,22 @@ void ue_main(char *fname)
 
     /* main loop */
     for (;;) {
-        char *key;
-
         /* read terminal size, if new or changed */
         if (ue.sigwinch_received)
             get_tty_size();
 
-        paint();
+        output();
 
-        key = read_string();
-
-        if (key[0] == ctrl('q'))
+        if (!input())
             break;
     }
 
     /* shutdown */
     raw_tty(0, &tios);
     shutdown();
+
+end:
+    return 0;
 }
 
 
