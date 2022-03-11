@@ -1,0 +1,27 @@
+µe - an ANSI tty micro text editor by grunfink - public domain
+
+goals:
+
+* stripped, size-optimized size of object (NOT executable) < 10K
+* copy/paste
+* expects an utf-8 environment (both ANSI terminal and documents)
+* uses iso8859-1 internally
+* 1 file
+* no syntax highlight
+* no undo
+
+keys:
+
+ctrl-b  mark selection
+ctrl-c  copy to clipboard
+ctrl-h  move left
+ctrl-j  move down
+ctrl-k  move up
+ctrl-l  move right
+ctrl-n  next page
+ctrl-p  previous page
+ctrl-q  exit
+ctrl-s  save document
+ctrl-u  unmark selection
+ctrl-v  paste from clipboard
+ctrl-x  cut to clipboard
