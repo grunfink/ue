@@ -5,7 +5,7 @@ goals:
 * stripped, size-optimized size of object (NOT executable) < 10K
 * copy/paste
 * expects an utf-8 environment (both ANSI terminal and documents)
-* uses iso8859-1 internally
+* uses iso8859-15 internally
 * 1 file
 * no syntax highlight
 * no undo
