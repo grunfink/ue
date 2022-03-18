@@ -167,7 +167,7 @@ int utf8_to_iso8859_1(uint32_t *cpoint, int *s, char c)
     }
 
     /* convert to iso8859-1 if ready */
-    if (s == 0) {
+    if (*s == 0) {
         if (*cpoint == 0x2014)
             *cpoint = 0xac;         /* NOT SIGN used internally as M-DASH */
         else
