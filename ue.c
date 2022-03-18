@@ -134,9 +134,10 @@ static void sigwinch_handler(int s)
 
 /* Unicode codepoint to internal representation conversion table */
 /* this is mostly iso8859-1 with some windows-1252 cherry-picks */
-struct {
-    uint64_t cpoint;
-    uint8_t isochar;
+/* ASCII NAK (0x15) is used for REPLACEMENT CHAR */
+struct _uc2int {
+    uint32_t cpoint;
+    uint32_t isochar;
 } uc2int[] = {
     { 0x2014,  0x97 },      /* M-DASH */
     { 0x20ac,  0x80 },      /* EURO SIGN */
@@ -152,8 +153,6 @@ struct {
     { 0x201c,  0x93 },      /* LEFT DOUBLE QUOTATION MARK */
     { 0x201d,  0x94 },      /* RIGHT DOUBLE QUOTATION MARK */
     { 0x2026,  0x85 },      /* ELLIPSIS */
-    { 0xFFFD,  0x15 },      /* ASCII NAK used internally as REPLACEMENT CHAR */
-    { 0,       0    }
 };
 
 
@@ -186,7 +185,7 @@ int utf8_to_internal(uint32_t *cpoint, int *s, char c)
         (*s)--;
     }
     else {
-        *cpoint = L'\xfffd';        /* Error; replacement character */
+        *cpoint = 0xfffd;        /* Error; replacement character */
         *s = 0;
     }
 
@@ -194,12 +193,16 @@ int utf8_to_internal(uint32_t *cpoint, int *s, char c)
     if (*s == 0) {
         int n;
 
-        for (n = 0; uc2int[n].cpoint; n++) {
+        for (n = 0; n < sizeof(uc2int) / sizeof(struct _uc2int); n++) {
             if (*cpoint == uc2int[n].cpoint) {
-                *cpoint =  uc2int[n].isochar;
+                *cpoint = uc2int[n].isochar;
                 break;
             }
         }
+
+        /* set anything not converted to an error */
+        if (*cpoint > 0xff)
+            *cpoint = 0x15;
     }
 
     return *s;
@@ -241,15 +244,14 @@ int load_file(char *fname)
 }
 
 
-void put_internal_to_file(uint8_t c, FILE *f)
+void put_internal_to_file(uint32_t cpoint, FILE *f)
 /* puts an internal char into a file, converting to utf-8 */
 {
     int n;
-    uint32_t cpoint = c;
 
-    for (n = 0; uc2int[n].cpoint; n++) {
+    for (n = 0; n < sizeof(uc2int) / sizeof(struct _uc2int); n++) {
         if (cpoint == uc2int[n].isochar) {
-            cpoint =  uc2int[n].cpoint;
+            cpoint = uc2int[n].cpoint;
             break;
         }
     }
