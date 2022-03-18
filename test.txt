@@ -29,7 +29,7 @@ German (de)
 Spanish (es)
 ------------
 
-  —El pingüino Wenceslao hizo kilómetros bajo exhaustiva lluvia y 
+  —El pingüino Wenceslao hizo kilómetros bajo «exhaustiva» lluvia y 
   frío, añoraba a su querido cachorro.
   (Contains every letter and every accent, but not every combination
   of vowel + acute.)

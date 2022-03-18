@@ -169,10 +169,10 @@ int utf8_to_iso8859_1(uint32_t *cpoint, int *s, char c)
     /* convert to iso8859-1 if ready */
     if (*s == 0) {
         if (*cpoint == 0x2014)
-            *cpoint = 0xac;         /* NOT SIGN used internally as M-DASH */
+            *cpoint = 0x19;         /* ASCII EM used internally as M-DASH */
         else
         if (*cpoint > 0xff)
-            *cpoint = 0xa4;         /* CURRENCY SIGN used internally as REPLACEMENT CHAR */
+            *cpoint = 0x15;         /* ASCII NAK used internally as REPLACEMENT CHAR */
     }
 
     return *s;
@@ -218,10 +218,10 @@ void put_iso8859_1_to_file(uint8_t c, FILE *f)
 /* puts an iso8859-1 char into a file, converting to utf-8 */
 {
     /* special cases */
-    if (c == 0xac)  /* not sign is the m-dash */
+    if (c == 0x19)  /* ASCII EM is the M-DASH */
         fwrite("\xe2\x80\x94", 1, 3, f);
     else
-    if (c == 0xa4)  /* broken characters are the replacement character */
+    if (c == 0x15)  /* NAK is the REPLACEMENT CHARACTER */
         fwrite("\xef\xbf\xbd", 1, 3, f);
     else
     if (c > 0x7f) { /* iso8859-1 character */
