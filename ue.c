@@ -133,8 +133,8 @@ static void sigwinch_handler(int s)
 #define clrscr()     printf("\033[2J")
 
 
-int utf8_to_cpoint(uint32_t *cpoint, int *s, char c)
-/* reads an utf-8 stream and decodes the codepoint */
+int utf8_to_iso8859_1(uint32_t *cpoint, int *s, char c)
+/* reads an utf-8 stream, decodes the codepoint and converts to iso8859-1 */
 {
     if (!*s && (c & 0x80) == 0) { /* 1 byte char */
         *cpoint = c;
@@ -162,8 +162,17 @@ int utf8_to_cpoint(uint32_t *cpoint, int *s, char c)
         (*s)--;
     }
     else {
-        *cpoint = L'\xfffd';
+        *cpoint = L'\xfffd';        /* Error; replacement character */
         *s = 0;
+    }
+
+    /* convert to iso8859-1 if ready */
+    if (s == 0) {
+        if (*cpoint == 0x2014)
+            *cpoint = 0xac;         /* NOT SIGN used internally as M-DASH */
+        else
+        if (*cpoint > 0xff)
+            *cpoint = 0xa4;         /* CURRENCY SIGN used internally as REPLACEMENT CHAR */
     }
 
     return *s;
@@ -186,16 +195,8 @@ int load_file(char *fname)
 
         while (ue.size < DATA_SIZE && (c = fgetc(f)) != EOF) {
             /* keep decoding utf8 until a full codepoint is found */
-            if (utf8_to_cpoint(&cpoint, &ustate, c) == 0) {
-                /* treat special cases */
-                if (cpoint == 0x2014)
-                    cpoint = 0xac;      /* the m-dash is the not sign */
-                else
-                if (cpoint > 0xff)
-                    cpoint = 0xa4;      /* all above iso8859-1 is an error */
-
-                ue.data[ue.size++] = cpoint & 0xff;
-            }
+            if (utf8_to_iso8859_1(&cpoint, &ustate, c) == 0)
+                ue.data[ue.size++] = cpoint;
         }
 
         fclose(f);
@@ -213,6 +214,25 @@ int load_file(char *fname)
 }
 
 
+void put_iso8859_1_to_file(uint8_t c, FILE *f)
+/* puts an iso8859-1 char into a file, converting to utf-8 */
+{
+    /* special cases */
+    if (c == 0xac)  /* not sign is the m-dash */
+        fwrite("\xe2\x80\x94", 1, 3, f);
+    else
+    if (c == 0xa4)  /* broken characters are the replacement character */
+        fwrite("\xef\xbf\xbd", 1, 3, f);
+    else
+    if (c > 0x7f) { /* iso8859-1 character */
+        fputc(0xc0 | (c >> 6),   f);
+        fputc(0x80 | (c & 0x3f), f);
+    }
+    else
+        fputc(c, f);
+}
+
+
 void save_file(char *fname)
 /* saves the file */
 {
@@ -221,23 +241,8 @@ void save_file(char *fname)
     if ((f = fopen(fname, "wb")) != NULL) {
         int n;
 
-        for (n = 0; n < ue.size; n++) {
-            int c = ue.data[n];
-
-            /* special cases */
-            if (c == 0xac)  /* not sign is the m-dash */
-                fwrite("\xe2\x80\x94", 1, 3, f);
-            else
-            if (c == 0xa4)  /* broken characters are the replacement character */
-                fwrite("\xef\xbf\xbd", 1, 3, f);
-            else
-            if (c > 0x7f) { /* iso8859-1 character */
-                fputc(0xc0 | (c >> 6),   f);
-                fputc(0x80 | (c & 0x3f), f);
-            }
-            else
-                fputc(c, f);
-        }
+        for (n = 0; n < ue.size; n++)
+            put_iso8859_1_to_file(ue.data[n], f);
 
         fclose(f);
     }
