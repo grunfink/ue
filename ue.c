@@ -77,7 +77,7 @@ char *read_string(void)
 
         read(0, &c, sizeof(c));
 
-        if (n < sizeof(buf))
+        if (n < sizeof(buf) - 1)
             buf[n++] = c;
     } while (something_waiting(10));
 
@@ -132,27 +132,33 @@ static void sigwinch_handler(int s)
 #define clreol()     printf("\033[K")
 #define clrscr()     printf("\033[2J")
 
-/* Unicode codepoint to ISO-8859-15 conversion table */
+/* Unicode codepoint to internal representation conversion table */
+/* this is mostly iso8859-1 with some windows-1252 cherry-picks */
 struct {
     uint64_t cpoint;
     uint8_t isochar;
-} uc2iso[] = {
-    { 0x2014,  0x19 },      /* ASCII EM used internally as M-DASH */
-    { 0x20ac,  0xa4 },      /* EURO SIGN */
-    { 0x0160,  0xa6 },      /* S WITH CARON */
-    { 0x0161,  0xa8 },      /* s WITH CARON */
-    { 0x017d,  0xb4 },      /* Z WITH CARON */
-    { 0x017e,  0xb8 },      /* z WITH CARON */
-    { 0x0152,  0xbc },      /* OE LIGATURE */
-    { 0x0153,  0xbd },      /* oe LIGATURE */
-    { 0x0178,  0xbe },      /* Y WITH DIAERESIS */
+} uc2int[] = {
+    { 0x2014,  0x97 },      /* M-DASH */
+    { 0x20ac,  0x80 },      /* EURO SIGN */
+    { 0x0160,  0x8a },      /* S WITH CARON */
+    { 0x0161,  0x9a },      /* s WITH CARON */
+    { 0x017d,  0x8e },      /* Z WITH CARON */
+    { 0x017e,  0x9e },      /* z WITH CARON */
+    { 0x0152,  0x8c },      /* OE LIGATURE */
+    { 0x0153,  0x9c },      /* oe LIGATURE */
+    { 0x0178,  0x9f },      /* Y WITH DIAERESIS */
+    { 0x2018,  0x91 },      /* LEFT SINGLE QUOTATION MARK */
+    { 0x2019,  0x92 },      /* RIGHT SINGLE QUOTATION MARK */
+    { 0x201c,  0x93 },      /* LEFT DOUBLE QUOTATION MARK */
+    { 0x201d,  0x94 },      /* RIGHT DOUBLE QUOTATION MARK */
+    { 0x2026,  0x85 },      /* ELLIPSIS */
     { 0xFFFD,  0x15 },      /* ASCII NAK used internally as REPLACEMENT CHAR */
     { 0,       0    }
 };
 
 
-int utf8_to_iso8859_15(uint32_t *cpoint, int *s, char c)
-/* reads an utf-8 stream, decodes the codepoint and converts to iso8859-15 */
+int utf8_to_internal(uint32_t *cpoint, int *s, char c)
+/* reads an utf-8 stream, decodes the codepoint and converts to internal */
 {
     if (!*s && (c & 0x80) == 0) { /* 1 byte char */
         *cpoint = c;
@@ -184,13 +190,13 @@ int utf8_to_iso8859_15(uint32_t *cpoint, int *s, char c)
         *s = 0;
     }
 
-    /* convert to iso8859-15 if ready */
+    /* convert to internal if ready */
     if (*s == 0) {
         int n;
 
-        for (n = 0; uc2iso[n].cpoint; n++) {
-            if (*cpoint == uc2iso[n].cpoint) {
-                *cpoint =  uc2iso[n].isochar;
+        for (n = 0; uc2int[n].cpoint; n++) {
+            if (*cpoint == uc2int[n].cpoint) {
+                *cpoint =  uc2int[n].isochar;
                 break;
             }
         }
@@ -216,7 +222,7 @@ int load_file(char *fname)
 
         while (ue.size < DATA_SIZE && (c = fgetc(f)) != EOF) {
             /* keep decoding utf8 until a full codepoint is found */
-            if (utf8_to_iso8859_15(&cpoint, &ustate, c) == 0)
+            if (utf8_to_internal(&cpoint, &ustate, c) == 0)
                 ue.data[ue.size++] = cpoint;
         }
 
@@ -235,15 +241,15 @@ int load_file(char *fname)
 }
 
 
-void put_iso8859_15_to_file(uint8_t c, FILE *f)
-/* puts an iso8859-15 char into a file, converting to utf-8 */
+void put_internal_to_file(uint8_t c, FILE *f)
+/* puts an internal char into a file, converting to utf-8 */
 {
     int n;
     uint32_t cpoint = c;
 
-    for (n = 0; uc2iso[n].cpoint; n++) {
-        if (cpoint == uc2iso[n].isochar) {
-            cpoint =  uc2iso[n].cpoint;
+    for (n = 0; uc2int[n].cpoint; n++) {
+        if (cpoint == uc2int[n].isochar) {
+            cpoint =  uc2int[n].cpoint;
             break;
         }
     }
@@ -273,7 +279,7 @@ void save_file(char *fname)
         int n;
 
         for (n = 0; n < ue.size; n++)
-            put_iso8859_15_to_file(ue.data[n], f);
+            put_internal_to_file(ue.data[n], f);
 
         fclose(f);
     }
