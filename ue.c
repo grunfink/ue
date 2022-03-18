@@ -134,7 +134,6 @@ static void sigwinch_handler(int s)
 
 /* Unicode codepoint to internal representation conversion table */
 /* this is mostly iso8859-1 with some windows-1252 cherry-picks */
-/* ASCII NAK (0x15) is used for REPLACEMENT CHAR */
 struct _uc2int {
     uint32_t cpoint;
     uint32_t isochar;
@@ -153,6 +152,7 @@ struct _uc2int {
     { 0x201c,  0x93 },      /* LEFT DOUBLE QUOTATION MARK */
     { 0x201d,  0x94 },      /* RIGHT DOUBLE QUOTATION MARK */
     { 0x2026,  0x85 },      /* ELLIPSIS */
+    { 0xfffd,  0x15 },      /* ASCII NAK (0x15) is used for REPLACEMENT CHAR */
 };
 
 
