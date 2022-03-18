@@ -132,6 +132,24 @@ static void sigwinch_handler(int s)
 #define clreol()     printf("\033[K")
 #define clrscr()     printf("\033[2J")
 
+/* Unicode codepoint to ISO-8859-15 conversion table */
+struct {
+    uint64_t cpoint;
+    uint8_t isochar;
+} uc2iso[] = {
+    { 0x2014,  0x19 },      /* ASCII EM used internally as M-DASH */
+    { 0x20ac,  0xa4 },      /* EURO SIGN */
+    { 0x0160,  0xa6 },      /* S WITH CARON */
+    { 0x0161,  0xa8 },      /* s WITH CARON */
+    { 0x017d,  0xb4 },      /* Z WITH CARON */
+    { 0x017e,  0xb8 },      /* z WITH CARON */
+    { 0x0152,  0xbc },      /* OE LIGATURE */
+    { 0x0153,  0xbd },      /* oe LIGATURE */
+    { 0x0178,  0xbe },      /* Y WITH DIAERESIS */
+    { 0xFFFD,  0x15 },      /* ASCII NAK used internally as REPLACEMENT CHAR */
+    { 0,       0    }
+};
+
 
 int utf8_to_iso8859_15(uint32_t *cpoint, int *s, char c)
 /* reads an utf-8 stream, decodes the codepoint and converts to iso8859-15 */
@@ -168,35 +186,14 @@ int utf8_to_iso8859_15(uint32_t *cpoint, int *s, char c)
 
     /* convert to iso8859-15 if ready */
     if (*s == 0) {
-        if (*cpoint == 0x2014)
-            *cpoint = 0x19;         /* ASCII EM used internally as M-DASH */
-        else
-        if (*cpoint == 0x20ac)
-            *cpoint = 0xa4;         /* EURO SIGN */
-        else
-        if (*cpoint == 0x0160)
-            *cpoint = 0xa6;         /* S WITH CARON */
-        else
-        if (*cpoint == 0x0161)
-            *cpoint = 0xa8;         /* s WITH CARON */
-        else
-        if (*cpoint == 0x017d)
-            *cpoint = 0xb4;         /* Z WITH CARON */
-        else
-        if (*cpoint == 0x017e)
-            *cpoint = 0xb8;         /* z WITH CARON */
-        else
-        if (*cpoint == 0x0152)
-            *cpoint = 0xbc;         /* OE LIGATURE */
-        else
-        if (*cpoint == 0x0153)
-            *cpoint = 0xbd;         /* oe LIGATURE */
-        else
-        if (*cpoint == 0x0178)
-            *cpoint = 0xbe;         /* Y WITH DIAERESIS */
-        else
-        if (*cpoint > 0xff)
-            *cpoint = 0x15;         /* ASCII NAK used internally as REPLACEMENT CHAR */
+        int n;
+
+        for (n = 0; uc2iso[n].cpoint; n++) {
+            if (*cpoint == uc2iso[n].cpoint) {
+                *cpoint =  uc2iso[n].isochar;
+                break;
+            }
+        }
     }
 
     return *s;
@@ -241,64 +238,28 @@ int load_file(char *fname)
 void put_iso8859_15_to_file(uint8_t c, FILE *f)
 /* puts an iso8859-15 char into a file, converting to utf-8 */
 {
-    switch (c) {
-    case 0x19:
-        /* ASCII EM is the M-DASH */
-        fwrite("\xe2\x80\x94", 1, 3, f);
-        break;
+    int n;
+    uint32_t cpoint = c;
 
-    case 0x15:
-        /* NAK is the REPLACEMENT CHARACTER */
-        fwrite("\xef\xbf\xbd", 1, 3, f);
-        break;
-
-    case 0xa4:
-        /* EURO */
-        fwrite("\xe2\x82\xac", 1, 3, f);
-        break;
-
-    case 0xa6:
-        /* S WITH CARON */
-        fwrite("\xc5\xa0", 1, 2, f);
-        break;
-
-    case 0xa8:
-        /* s WITH CARON */
-        fwrite("\xc5\xa0", 1, 2, f);
-        break;
-
-    case 0xb4:
-        /* Z WITH CARON */
-        fwrite("\xc5\xbd", 1, 2, f);
-        break;
-
-    case 0xb8:
-        /* z WITH CARON */
-        fwrite("\xc5\xbe", 1, 2, f);
-        break;
-
-    case 0xbc:
-        /* OE */
-        fwrite("\xc5\x92", 1, 2, f);
-        break;
-
-    case 0xbd:
-        /* oe */
-        fwrite("\xc5\x93", 1, 2, f);
-        break;
-
-    case 0xbe:
-        /* Y WITH DIARESIS */
-        fwrite("\xe2\xc5\xb8", 1, 2, f);
-        break;
-
-    default:
-        if (c > 0x7f) { /* iso8859-15 character */
-            fputc(0xc0 | (c >> 6),   f);
-            fputc(0x80 | (c & 0x3f), f);
+    for (n = 0; uc2iso[n].cpoint; n++) {
+        if (cpoint == uc2iso[n].isochar) {
+            cpoint =  uc2iso[n].cpoint;
+            break;
         }
-        else
-            fputc(c, f);
+    }
+
+    if (cpoint < 0x80)
+        fputc((char)cpoint, f);
+    else
+    if (cpoint < 0x800) {
+        fputc((char) (0xc0 | (cpoint >> 6)),   f);
+        fputc((char) (0x80 | (cpoint & 0x3f)), f);
+    }
+    else
+    if (cpoint < 0x10000) {
+        fputc((char) (0xe0 | (cpoint >> 12)),         f);
+        fputc((char) (0x80 | ((cpoint >> 6) & 0x3f)), f);
+        fputc((char) (0x80 | (cpoint & 0x3f)),        f);
     }
 }
 
