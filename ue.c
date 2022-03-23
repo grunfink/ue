@@ -310,8 +310,11 @@ void output(void)
 void ue_delete(int count)
 /* deletes count bytes from the cursor position */
 {
+    int n;
+
     /* move memory 'down' */
-    memmove(&ue.data[ue.cpos], &ue.data[ue.cpos + count], ue.size - ue.cpos);
+    for (n = 0; n < ue.size - ue.cpos; n++)
+        ue.data[ue.cpos + n] = ue.data[ue.cpos + n + count];
 
     /* decrease size */
     ue.size -= count;
