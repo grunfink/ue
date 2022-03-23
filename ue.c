@@ -20,6 +20,7 @@ struct {
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
+    int vpos;                   /* visual position (first byte shown) */
     int cpos;                   /* cursor position */
     int size;                   /* size of document */
     uint8_t data[DATA_SIZE];    /* the document data */
@@ -379,9 +380,38 @@ void output(void)
         ue.new_file = 0;
     }
     else {
-        printf("cpos: %d size: %d row_size: %d [%02x]",
-            ue.cpos, ue.size, ue_row_size(ue.cpos), ue.data[ue.cpos]);
-        clreol();
+//        printf("cpos: %d size: %d row_size: %d [%02x]",
+//            ue.cpos, ue.size, ue_row_size(ue.cpos), ue.data[ue.cpos]);
+//        clreol();
+        int n, p;
+        int cx, cy;
+
+        cx = cy = -1;
+
+        for (n = 0, p = ue.vpos; n < ue.height; n++) {
+            int m, size;
+
+            gotoxy(0, n);
+
+            /* get size of row */
+            size = ue_row_size(p);
+
+            for (m = 0; m <= size; m++) {
+                /* cursor position? store coords */
+                if (p == ue.cpos) {
+                    cx = m;
+                    cy = n;
+                }
+
+                /* put char */
+                put_internal_to_file(ue.data[p++], stdout);
+            }
+
+            clreol();
+        }
+
+        if (cx != -1)
+            gotoxy(cx, cy);
     }
 
     fflush(stdout);
