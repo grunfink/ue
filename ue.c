@@ -258,16 +258,16 @@ void put_internal_to_file(uint32_t cpoint, FILE *f)
 
     if (cpoint < 0x80)
         fputc((char)cpoint, f);
-    else
-    if (cpoint < 0x800) {
-        fputc((char) (0xc0 | (cpoint >> 6)),   f);
+    else {
+        if (cpoint < 0x800)
+            fputc((char) (0xc0 | (cpoint >> 6)),   f);
+        else
+        if (cpoint < 0x10000) {
+            fputc((char) (0xe0 | (cpoint >> 12)),         f);
+            fputc((char) (0x80 | ((cpoint >> 6) & 0x3f)), f);
+        }
+
         fputc((char) (0x80 | (cpoint & 0x3f)), f);
-    }
-    else
-    if (cpoint < 0x10000) {
-        fputc((char) (0xe0 | (cpoint >> 12)),         f);
-        fputc((char) (0x80 | ((cpoint >> 6) & 0x3f)), f);
-        fputc((char) (0x80 | (cpoint & 0x3f)),        f);
     }
 }
 
