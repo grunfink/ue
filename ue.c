@@ -311,10 +311,26 @@ void ue_delete(int count)
 /* deletes count bytes from the cursor position */
 {
     /* move memory 'down' */
-    memmove(&ue.data[ue.cpos], &ue.data[ue.cpos + count], ue.size - ue.cpos - count);
+    memmove(&ue.data[ue.cpos], &ue.data[ue.cpos + count], ue.size - ue.cpos);
 
-    /* shorten content */
+    /* decrease size */
     ue.size -= count;
+}
+
+
+void ue_insert(char c)
+/* inserts a byte into the cursor position */
+{
+    if (ue.size < DATA_SIZE - 1) {
+        /* move memory 'up' */
+        memmove(&ue.data[ue.cpos + 1], &ue.data[ue.cpos], ue.size - ue.cpos);
+
+        /* copy into cursor position and advance */
+        ue.data[ue.cpos++] = c;
+
+        /* increase size */
+        ue.size += 1;
+    }
 }
 
 
@@ -364,8 +380,21 @@ int input(void)
             ue.cpos--;
             ue_delete(1);
         }
+        break;
 
     default:
+        {
+            uint32_t cpoint;
+            int s = 0;
+            int n = strlen(key);
+
+            while (n--) {
+                /* decode utf-8 and insert char by char */
+                if (utf8_to_internal(&cpoint, &s, *key) == 0)
+                    ue_insert(cpoint);
+                key++;
+            }
+        }
         break;
     }
 
