@@ -307,21 +307,6 @@ int ue_find_bol(int pos)
 }
 
 
-#if 0
-int ue_find_eol(int pos)
-/* finds the end of the line */
-{
-    while (pos < ue.size && ue.data[pos] != '\n')
-        pos++;
-
-    if (pos < ue.size)
-        pos++;
-
-    return pos;
-}
-#endif
-
-
 int ue_row_size(int pos)
 /* returns the size of the row from pos */
 {
@@ -410,7 +395,7 @@ void ue_fix_vpos(void)
 }
 
 
-void output(void)
+void ue_output(void)
 /* paint the document to the screen */
 {
     ue_fix_vpos();
@@ -495,7 +480,7 @@ void ue_insert(char c)
 
 #define ctrl(k) ((k) & 31)
 
-int input(void)
+int ue_input(void)
 /* processes keys */
 {
     char *key;
@@ -667,9 +652,9 @@ int ue_main(char *fname)
         if (ue.sigwinch_received)
             get_tty_size();
 
-        output();
+        ue_output();
 
-        if (!input())
+        if (!ue_input())
             break;
     }
 
