@@ -375,7 +375,7 @@ void ue_fix_vpos(void)
             int size;
 
             /* store */
-            ac0[(n + ue.height - 2)] = ue.vpos;
+            ac0[(n + ue.height - 2) % (ue.height * 2)] = ue.vpos;
 
             /* get the row size */
             size = ue_row_size(ue.vpos) + 1;
@@ -480,13 +480,10 @@ void ue_insert(char c)
 
 #define ctrl(k) ((k) & 31)
 
-int ue_input(void)
+int ue_input(char *key)
 /* processes keys */
 {
-    char *key;
     int running = 1;
-
-    key = read_string();
 
     switch (key[0]) {
     case ctrl('l'):
@@ -559,11 +556,23 @@ int ue_input(void)
 
     case ctrl('p'):
         /* page up */
+        {
+            int n;
+
+            for (n = 0; n < ue.height - 1; n++)
+                ue_input("\x0b");
+        }
 
         break;
 
     case ctrl('n'):
         /* page down */
+        {
+            int n;
+
+            for (n = 0; n < ue.height - 1; n++)
+                ue_input("\x0a");
+        }
 
         break;
 
@@ -654,7 +663,7 @@ int ue_main(char *fname)
 
         ue_output();
 
-        if (!ue_input())
+        if (!ue_input(read_string()))
             break;
     }
 
