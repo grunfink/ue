@@ -467,14 +467,16 @@ void ue_delete(int count)
 {
     int n;
 
-    /* move memory 'down' */
-    for (n = 0; n < ue.size - ue.cpos; n++)
-        ue.data[ue.cpos + n] = ue.data[ue.cpos + n + count];
+    if (ue.cpos < ue.size) {
+        /* move memory 'down' */
+        for (n = 0; n < ue.size - ue.cpos; n++)
+            ue.data[ue.cpos + n] = ue.data[ue.cpos + n + count];
 
-    /* decrease size */
-    ue.size -= count;
+        /* decrease size */
+        ue.size -= count;
 
-    ue.modified++;
+        ue.modified++;
+    }
 }
 
 
@@ -633,6 +635,12 @@ int ue_input(char *key)
         else
             running = 0;
 
+        break;
+
+    case ctrl('y'):
+        /* delete line */
+        ue.cpos = ue_find_col_0(ue.cpos);
+        ue_delete(ue_row_size(ue.cpos) + 1);
         break;
 
     case '\177':
