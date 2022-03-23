@@ -20,6 +20,7 @@ struct {
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
+    int refuse_quit;            /* refuse-quit-because-of-file-modified flag */
     int vpos;                   /* visual position (first byte shown) */
     int cpos;                   /* cursor position */
     int size;                   /* size of document */
@@ -286,6 +287,8 @@ void save_file(char *fname)
             put_internal_to_file(ue.data[n], f);
 
         fclose(f);
+
+        ue.modified = 0;
     }
 }
 
@@ -400,11 +403,19 @@ void ue_output(void)
 {
     ue_fix_vpos();
 
-    /* new file? say it */
+    gotoxy(0, 0);
+
     if (ue.new_file) {
-        gotoxy(0, 0);
+        /* new file? say it */
         printf("<new file>");
         ue.new_file = 0;
+    }
+    else
+    if (ue.refuse_quit) {
+        /* refuse quit? say it */
+        printf("file is modified; hit ctrl-w to force quit");
+        clreol();
+        ue.refuse_quit = 0;
     }
     else {
         int n, p;
@@ -456,6 +467,8 @@ void ue_delete(int count)
 
     /* decrease size */
     ue.size -= count;
+
+    ue.modified++;
 }
 
 
@@ -474,6 +487,8 @@ void ue_insert(char c)
 
         /* increase size */
         ue.size += 1;
+
+        ue.modified++;
     }
 }
 
@@ -602,15 +617,16 @@ int ue_input(char *key)
         break;
 
     case ctrl('w'):
-        /* quit and save the unmodified document to .ue.saved */
-        if (ue.modified)
-            save_file(".ue.saved");
-
-        /* fall to ctrl-z */
-
-    case ctrl('q'):
         /* force quit */
         running = 0;
+
+    case ctrl('q'):
+        /* quit (if not modified) */
+        if (ue.modified)
+            ue.refuse_quit = 1;
+        else
+            running = 0;
+
         break;
 
     case '\177':
