@@ -410,6 +410,11 @@ void output(void)
             clreol();
         }
 
+        for (; n < ue.height; n++) {
+            gotoxy(0, n);
+            clreol();
+        }
+
         if (cx != -1)
             gotoxy(cx, cy);
     }
@@ -532,14 +537,14 @@ int input(void)
         /* unmark selection */
         break;
 
-    case ctrl('q'):
+    case ctrl('w'):
         /* quit and save the unmodified document to .ue.saved */
         if (ue.modified)
             save_file(".ue.saved");
 
         /* fall to ctrl-z */
 
-    case ctrl('z'):
+    case ctrl('q'):
         /* force quit */
         running = 0;
         break;
