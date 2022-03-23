@@ -515,6 +515,23 @@ int input(void)
 
     case ctrl('j'):
         /* move down */
+        {
+            int col0, col, size;
+
+            col0 = ue_find_col_0(ue.cpos);
+            col  = ue.cpos - col0;
+            size = ue_row_size(col0);
+
+            /* not at EOF? */
+            if (col0 + size < ue.size) {
+                /* move to the beginning of the next line */
+                ue.cpos = col0 + size + 1;
+
+                /* move to previous column or end of row */
+                size = ue_row_size(ue.cpos);
+                ue.cpos += (col < size ? col : size);
+            }
+        }
 
         break;
 
