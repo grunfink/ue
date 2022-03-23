@@ -393,25 +393,22 @@ void output(void)
 
             gotoxy(0, n);
 
-            /* get size of row */
-            size = ue_row_size(p);
+            if (p <= ue.size) {
+                /* get size of row */
+                size = ue_row_size(p);
 
-            for (m = 0; m <= size; m++) {
-                /* cursor position? store coords */
-                if (p == ue.cpos) {
-                    cx = m;
-                    cy = n;
+                for (m = 0; m <= size; m++) {
+                    /* cursor position? store coords */
+                    if (p == ue.cpos) {
+                        cx = m;
+                        cy = n;
+                    }
+
+                    /* put char */
+                    put_internal_to_file(ue.data[p++], stdout);
                 }
-
-                /* put char */
-                put_internal_to_file(ue.data[p++], stdout);
             }
 
-            clreol();
-        }
-
-        for (; n < ue.height; n++) {
-            gotoxy(0, n);
             clreol();
         }
 
@@ -595,6 +592,9 @@ int input(void)
             uint32_t cpoint;
             int s = 0;
             int n = strlen(key);
+
+            if (key[0] == '\r')
+                key[0] = '\n';
 
             while (n--) {
                 /* decode utf-8 and insert char by char */
