@@ -405,7 +405,8 @@ void output(void)
                     }
 
                     /* put char */
-                    put_internal_to_file(ue.data[p++], stdout);
+                    int c = ue.data[p++];
+                    put_internal_to_file(c == '\n' ? ' ' : c, stdout);
                 }
             }
 
