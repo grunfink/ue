@@ -592,16 +592,14 @@ int input(void)
         if (key[0] != '\x1b') {
             uint32_t cpoint;
             int s = 0;
-            int n = strlen(key);
 
             if (key[0] == '\r')
                 key[0] = '\n';
 
-            while (n--) {
+            while (*key) {
                 /* decode utf-8 and insert char by char */
-                if (utf8_to_internal(&cpoint, &s, *key) == 0)
+                if (utf8_to_internal(&cpoint, &s, *key++) == 0)
                     ue_insert(cpoint);
-                key++;
             }
         }
         break;
