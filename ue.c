@@ -325,8 +325,11 @@ void ue_insert(char c)
 /* inserts a byte into the cursor position */
 {
     if (ue.size < DATA_SIZE - 1) {
+        int n;
+
         /* move memory 'up' */
-        memmove(&ue.data[ue.cpos + 1], &ue.data[ue.cpos], ue.size - ue.cpos);
+        for (n = ue.size - ue.cpos; n > 0; n--)
+            ue.data[ue.cpos + n] = ue.data[ue.cpos + n - 1];
 
         /* copy into cursor position and advance */
         ue.data[ue.cpos++] = c;
