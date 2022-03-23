@@ -132,8 +132,8 @@ static void sigwinch_handler(int s)
 #define clreol()     printf("\033[K")
 #define clrscr()     printf("\033[2J")
 
-/* Unicode codepoint to internal representation conversion table */
-/* this is mostly iso8859-1 with some windows-1252 cherry-picks */
+/* Unicode codepoint to internal representation conversion table,
+   which is mostly iso8859-1 with some windows-1252 cherry-picks */
 struct _uc2int {
     uint32_t cpoint;
     uint32_t isochar;
@@ -249,6 +249,7 @@ void put_internal_to_file(uint32_t cpoint, FILE *f)
 {
     int n;
 
+    /* convert non-standard characters */
     for (n = 0; n < sizeof(uc2int) / sizeof(struct _uc2int); n++) {
         if (cpoint == uc2int[n].isochar) {
             cpoint = uc2int[n].cpoint;
