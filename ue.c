@@ -355,7 +355,8 @@ void output(void)
         ue.new_file = 0;
     }
     else {
-        printf("cpos: %d size: %d row_size: %d", ue.cpos, ue.size, ue_row_size(ue.cpos));
+        printf("cpos: %d size: %d row_size: %d [%02x]",
+            ue.cpos, ue.size, ue_row_size(ue.cpos), ue.data[ue.cpos]);
         clreol();
     }
 
@@ -426,6 +427,7 @@ int input(void)
 
     case ctrl('e'):
         /* end of row */
+        ue.cpos += ue_row_size(ue.cpos);
 
         break;
 
