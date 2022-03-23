@@ -289,6 +289,61 @@ void save_file(char *fname)
 }
 
 
+#if 0
+int ue_find_bol(int pos)
+/* finds the beginning of the line */
+{
+    if (pos) {
+        /* if it's over an EOL, move backwards */
+        if (ue.data[pos] == '\n')
+            pos--;
+
+        /* find it */
+        while (pos && ue.data[pos] != '\n')
+            pos--;
+    }
+
+    return pos;
+}
+
+
+int ue_find_eol(int pos)
+/* finds the end of the line */
+{
+    while (pos < ue.size && ue.data[pos] != '\n')
+        pos++;
+
+    if (pos < ue.size)
+        pos++;
+
+    return pos;
+}
+#endif
+
+
+int ue_row_size(int pos)
+/* returns the size of the row from pos */
+{
+    int size = 0;
+    int bpos = -1;
+
+    while (pos < ue.size && ue.data[pos] != '\n' && size < ue.width) {
+        /* remember the position of a blank */
+        if (ue.data[pos] == ' ')
+            bpos = size;
+
+        size++;
+        pos++;
+    }
+
+    /* if full size and a blank was seen, set it */
+    if (size == ue.width && bpos != -1)
+        size = bpos;
+
+    return size;
+}
+
+
 void output(void)
 /* paint the document to the screen */
 {
@@ -300,7 +355,7 @@ void output(void)
         ue.new_file = 0;
     }
     else {
-        printf("cpos: %d size: %d", ue.cpos, ue.size);
+        printf("cpos: %d size: %d row_size: %d", ue.cpos, ue.size, ue_row_size(ue.cpos));
         clreol();
     }
 
@@ -364,9 +419,59 @@ int input(void)
             ue.cpos--;
         break;
 
+    case ctrl('a'):
+        /* beginning of row */
+
+        break;
+
+    case ctrl('e'):
+        /* end of row */
+
+        break;
+
+    case ctrl('j'):
+        /* move down */
+
+        break;
+
+    case ctrl('k'):
+        /* move up */
+
+        break;
+
+    case ctrl('p'):
+        /* page up */
+
+        break;
+
+    case ctrl('n'):
+        /* page down */
+
+        break;
+
     case ctrl('s'):
         /* save file */
         save_file(ue.fname);
+        break;
+
+    case ctrl('c'):
+        /* copy block */
+        break;
+
+    case ctrl('v'):
+        /* paste block */
+        break;
+
+    case ctrl('x'):
+        /* cut block */
+        break;
+
+    case ctrl('b'):
+        /* mark beginning / end of selection */
+        break;
+
+    case ctrl('u'):
+        /* unmark selection */
         break;
 
     case ctrl('q'):
@@ -382,7 +487,7 @@ int input(void)
         break;
 
     case '\177':
-        /* delete */
+        /* backspace */
         if (ue.cpos > 0) {
             ue.cpos--;
             ue_delete(1);
@@ -390,7 +495,7 @@ int input(void)
         break;
 
     default:
-        {
+        if (key[0] != '\x1b') {
             uint32_t cpoint;
             int s = 0;
             int n = strlen(key);

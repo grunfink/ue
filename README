@@ -11,8 +11,10 @@ goals:
 
 keys:
 
+ctrl-a  beginning of line
 ctrl-b  mark selection
 ctrl-c  copy to clipboard
+ctrl-e  end of line
 ctrl-h  move left
 ctrl-j  move down
 ctrl-k  move up
