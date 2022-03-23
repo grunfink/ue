@@ -307,6 +307,17 @@ void output(void)
 }
 
 
+void ue_delete(int count)
+/* deletes count bytes from the cursor position */
+{
+    /* move memory 'down' */
+    memmove(&ue.data[ue.cpos], &ue.data[ue.cpos + count], ue.size - ue.cpos - count);
+
+    /* shorten content */
+    ue.size -= count;
+}
+
+
 #define ctrl(k) ((k) & 31)
 
 int input(void)
@@ -346,6 +357,13 @@ int input(void)
         /* force quit */
         running = 0;
         break;
+
+    case '\177':
+        /* delete */
+        if (ue.cpos > 0) {
+            ue.cpos--;
+            ue_delete(1);
+        }
 
     default:
         break;
