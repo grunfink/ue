@@ -492,13 +492,29 @@ int input(void)
 
         break;
 
-    case ctrl('j'):
-        /* move down */
+    case ctrl('k'):
+        /* move up */
+        {
+            int col0;
+
+            /* not at BOF? */
+            if ((col0 = ue_find_col_0(ue.cpos))) {
+                int col = ue.cpos - col0;
+                int size;
+
+                /* find the col0 of the previous row */
+                col0 = ue_find_col_0(col0 - 1);
+
+                /* move to previous column or end of row */
+                size = ue_row_size(col0);
+                ue.cpos = col0 + (col < size ? col : size);
+            }
+        }
 
         break;
 
-    case ctrl('k'):
-        /* move up */
+    case ctrl('j'):
+        /* move down */
 
         break;
 
