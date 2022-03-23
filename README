@@ -21,9 +21,9 @@ ctrl-k  move up
 ctrl-l  move right
 ctrl-n  next page
 ctrl-p  previous page
-ctrl-q  force quit
+ctrl-q  quit
 ctrl-s  save document
 ctrl-u  unmark selection
 ctrl-v  paste from clipboard
 ctrl-x  cut to clipboard
-ctrl-w  quit, save document to .ue.saved if modified
+ctrl-y  delete line

@@ -11,20 +11,20 @@
 #include <sys/time.h>
 #include <stdint.h>
 
-#define DATA_SIZE 32000
+#define DATA_SIZE 32768
 
 struct {
+    uint8_t data[DATA_SIZE];    /* the document data */
     char *fname;                /* file name */
     int width;                  /* terminal width */
     int height;                 /* terminal height */
+    int vpos;                   /* visual position (first byte shown) */
+    int cpos;                   /* cursor position */
+    int size;                   /* size of document */
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
     int refuse_quit;            /* refuse-quit-because-of-file-modified flag */
-    int vpos;                   /* visual position (first byte shown) */
-    int cpos;                   /* cursor position */
-    int size;                   /* size of document */
-    uint8_t data[DATA_SIZE];    /* the document data */
 } ue;
 
 
@@ -413,9 +413,15 @@ void ue_output(void)
     else
     if (ue.refuse_quit) {
         /* refuse quit? say it */
-        printf("file is modified; hit ctrl-w to force quit");
-        clreol();
-        ue.refuse_quit = 0;
+        if (ue.refuse_quit == 1) {
+            printf("file is modified; hit again to force quit");
+            clreol();
+            ue.refuse_quit = 2;
+        }
+        else
+        /* already notified but still here? user didn't quit */
+        if (ue.refuse_quit == 2)
+            ue.refuse_quit = 0;
     }
     else {
         int n, p;
@@ -616,14 +622,14 @@ int ue_input(char *key)
         /* unmark selection */
         break;
 
-    case ctrl('w'):
-        /* force quit */
-        running = 0;
-
     case ctrl('q'):
         /* quit (if not modified) */
-        if (ue.modified)
-            ue.refuse_quit = 1;
+        if (ue.modified) {
+            if (ue.refuse_quit == 2)
+                running = 0;
+            else
+                ue.refuse_quit = 1;
+        }
         else
             running = 0;
 
