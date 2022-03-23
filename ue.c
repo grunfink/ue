@@ -482,6 +482,7 @@ int input(void)
 
     case ctrl('e'):
         /* end of row */
+        ue.cpos = ue_find_col_0(ue.cpos);
         ue.cpos += ue_row_size(ue.cpos);
 
         break;
