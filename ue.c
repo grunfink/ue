@@ -369,20 +369,59 @@ int ue_find_col_0(int pos)
 }
 
 
+void ue_fix_vpos(void)
+/* fixes the visual position */
+{
+    if (ue.cpos < ue.vpos) {
+        /* cursor above first character? just get column #0 */
+        ue.vpos = ue_find_col_0(ue.cpos);
+    }
+    else {
+        int *ac0, n;
+
+        /* allocate a circular buffer to store a double set of column #0 */
+        ac0 = calloc(ue.height * 2, sizeof(int));
+
+        /* fill the first half with current vpos */
+        for (n = 0; n < ue.height; n++)
+            ac0[n] = ue.vpos;
+
+        for (n = 0;; n++) {
+            int size;
+
+            /* store */
+            ac0[(n + ue.height - 2)] = ue.vpos;
+
+            /* get the row size */
+            size = ue_row_size(ue.vpos) + 1;
+
+            /* if cpos is in this range, done */
+            if (ue.vpos <= ue.cpos && ue.cpos <= ue.vpos + size)
+                break;
+
+            ue.vpos += size;
+        }
+
+        /* finally get from the buffer */
+        ue.vpos = ac0[n % (ue.height * 2)];
+
+        free(ac0);
+    }
+}
+
+
 void output(void)
 /* paint the document to the screen */
 {
-    gotoxy(0, 0);
+    ue_fix_vpos();
 
     /* new file? say it */
     if (ue.new_file) {
+        gotoxy(0, 0);
         printf("<new file>");
         ue.new_file = 0;
     }
     else {
-//        printf("cpos: %d size: %d row_size: %d [%02x]",
-//            ue.cpos, ue.size, ue_row_size(ue.cpos), ue.data[ue.cpos]);
-//        clreol();
         int n, p;
         int cx, cy;
 
