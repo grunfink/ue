@@ -289,7 +289,6 @@ void save_file(char *fname)
 }
 
 
-#if 0
 int ue_find_bol(int pos)
 /* finds the beginning of the line */
 {
@@ -307,6 +306,7 @@ int ue_find_bol(int pos)
 }
 
 
+#if 0
 int ue_find_eol(int pos)
 /* finds the end of the line */
 {
@@ -341,6 +341,30 @@ int ue_row_size(int pos)
         size = bpos;
 
     return size;
+}
+
+
+int ue_find_col_0(int pos)
+/* returns the position of column #0 of this row */
+{
+    int col0;
+
+    /* find the beginning of the real line */
+    col0 = ue_find_bol(pos);
+
+    while (col0 < ue.size) {
+        /* get row size from here */
+        int size = ue_row_size(col0) + 1;
+
+        /* between column #0 and end-of-row? done */
+        if (col0 <= pos && pos < col0 + size)
+            break;
+
+        /* move to next line */
+        col0 += size;
+    }
+
+    return col0;
 }
 
 
@@ -422,6 +446,7 @@ int input(void)
 
     case ctrl('a'):
         /* beginning of row */
+        ue.cpos = ue_find_col_0(ue.cpos);
 
         break;
 
