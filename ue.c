@@ -172,10 +172,6 @@ int utf8_to_internal(uint32_t *cpoint, int *s, char c)
         *cpoint = (c & 0x0f) << 12; *s = 2;
     }
     else
-    if (!*s && (c & 0xf8) == 0xf0) { /* 4 byte char */
-        *cpoint = (c & 0x07) << 18; *s = 3;
-    }
-    else
     if (*s && (c & 0xc0) == 0x80) { /* continuation byte */
         switch (*s) {
         case 3: *cpoint |= (c & 0x3f) << 12; break;
@@ -494,7 +490,8 @@ int ue_expand(int size)
         /* increase size */
         ue.size += size;
 
-        ret = ++ue.modified;
+        ue.modified++;
+        ret++;
     }
 
     return ret;
@@ -637,18 +634,6 @@ int ue_input(char *key)
         else
         if (ue.mark_e == -1)
             ue.mark_e = ue.cpos;
-        else
-        if (ue.cpos < ue.mark_s)
-            ue.mark_s = ue.cpos;
-        else
-        if (ue.cpos > ue.mark_e)
-            ue.mark_e = ue.cpos;
-
-        if (ue.mark_s > ue.mark_e) {
-            int t = ue.mark_s;
-            ue.mark_s = ue.mark_e;
-            ue.mark_e = t;
-        }
 
         break;
 
