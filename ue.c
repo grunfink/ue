@@ -15,6 +15,7 @@
 
 struct {
     uint8_t data[DATA_SIZE];    /* the document data */
+    uint8_t clip[DATA_SIZE];    /* clipboard */
     char *fname;                /* file name */
     int width;                  /* terminal width */
     int height;                 /* terminal height */
@@ -23,7 +24,6 @@ struct {
     int size;                   /* size of document */
     int mark_s;                 /* selection mark start */
     int mark_e;                 /* selection mark end */
-    char *clipboard;            /* clipboard data */
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
@@ -612,9 +612,8 @@ int ue_input(char *key)
         if (ue.mark_s != -1 && ue.mark_e != -1) {
             /* alloc space into clipboard */
             int sz = ue.mark_e - ue.mark_s;
-            ue.clipboard = realloc(ue.clipboard, 1 + sz);
-            memcpy(ue.clipboard, &ue.data[ue.mark_s], sz);
-            ue.clipboard[sz] = '\0';
+            memcpy(ue.clip, &ue.data[ue.mark_s], sz);
+            ue.clip[sz] = '\0';
         }
 
         break;
