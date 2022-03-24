@@ -79,17 +79,12 @@ char *read_string(void)
 
     /* first char blocks, the (possible) next ones don't */
     do {
-        char c;
-
-        read(0, &c, sizeof(c));
-
-        if (n < sizeof(buf) - 1)
-            buf[n++] = c;
-    } while (something_waiting(10));
+        read(0, &buf[n++], sizeof(char));
+    } while (something_waiting(10) && n < sizeof(buf) - 1);
 
     buf[n] = '\0';
 
-    return n ? buf : NULL;
+    return buf;
 }
 
 
