@@ -683,15 +683,21 @@ int ue_input(char *key)
 
     case '\177':
         /* backspace */
-        if (ue.cpos > 0) {
-            ue.cpos--;
-            ue_delete(1);
-        }
-        break;
+        if (ue.cpos == 0)
+            break;
+
+        ue.cpos--;
+
+        /* fall through */
 
     case ctrl('d'):
         /* delete char under the cursor */
-        ue_delete(1);
+        if (ue.mark_e != -1) {
+            ue.cpos = ue.mark_s;
+            ue_delete(ue.mark_e - ue.mark_s);
+        }
+        else
+            ue_delete(1);
 
         break;
 
