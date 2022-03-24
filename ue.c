@@ -620,6 +620,24 @@ int ue_input(char *key)
 
     case ctrl('b'):
         /* mark beginning / end of selection */
+        if (ue.mark_s == -1)
+            ue.mark_s = ue.cpos;
+        else
+        if (ue.mark_e == -1)
+            ue.mark_e = ue.cpos;
+        else
+        if (ue.cpos < ue.mark_s)
+            ue.mark_s = ue.cpos;
+        else
+        if (ue.cpos > ue.mark_e)
+            ue.mark_e = ue.cpos;
+
+        if (ue.mark_s > ue.mark_e) {
+            int t = ue.mark_s;
+            ue.mark_s = ue.mark_e;
+            ue.mark_e = t;
+        }
+
         break;
 
     case ctrl('u'):
