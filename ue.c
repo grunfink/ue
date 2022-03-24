@@ -484,24 +484,33 @@ void ue_delete(int count)
 }
 
 
-void ue_insert(char c)
-/* inserts a byte into the cursor position */
+int ue_expand(int size)
+/* opens room in the cursor position */
 {
-    if (ue.size < DATA_SIZE - 1) {
+    int ret = 0;
+
+    if (ue.size + size < DATA_SIZE) {
         int n;
 
         /* move memory 'up' */
         for (n = ue.size - ue.cpos; n > 0; n--)
-            ue.data[ue.cpos + n] = ue.data[ue.cpos + n - 1];
-
-        /* copy into cursor position and advance */
-        ue.data[ue.cpos++] = c;
+            ue.data[ue.cpos + n] = ue.data[ue.cpos + n - size];
 
         /* increase size */
-        ue.size += 1;
+        ue.size += size;
 
-        ue.modified++;
+        ret = ++ue.modified;
     }
+
+    return ret;
+}
+
+
+void ue_insert(char c)
+/* inserts a byte into the cursor position */
+{
+    if (ue_expand(1))
+        ue.data[ue.cpos++] = c;
 }
 
 
