@@ -511,6 +511,7 @@ void ue_insert(char c)
 int ue_input(char *key)
 /* processes keys */
 {
+    int n = 0;          /* general-purpose variable */
     int running = 1;
 
     switch (key[0]) {
@@ -584,23 +585,15 @@ int ue_input(char *key)
 
     case ctrl('p'):
         /* page up */
-        {
-            int n;
-
-            for (n = 0; n < ue.height - 1; n++)
-                ue_input("\x0b");
-        }
+        for (n = 0; n < ue.height - 1; n++)
+            ue_input("\x0b");
 
         break;
 
     case ctrl('n'):
         /* page down */
-        {
-            int n;
-
-            for (n = 0; n < ue.height - 1; n++)
-                ue_input("\x0a");
-        }
+        for (n = 0; n < ue.height - 1; n++)
+            ue_input("\x0a");
 
         break;
 
@@ -609,22 +602,33 @@ int ue_input(char *key)
         save_file(ue.fname);
         break;
 
+    case ctrl('x'):
+        /* cut block */
+        n = 1;
+
+        /* fallthrough */
+
     case ctrl('c'):
         /* copy block */
-        if (ue.mark_s != -1 && ue.mark_e != -1) {
+        if (ue.mark_e != -1) {
             /* alloc space into clipboard */
             ue.clip_size = ue.mark_e - ue.mark_s;
             memcpy(ue.clip, &ue.data[ue.mark_s], ue.clip_size);
+
+            /* cut? delete block */
+            if (n)
+                ue_input("\x04");
         }
 
+        /* fallthrough */
+
+    case ctrl('u'):
+        /* unmark selection */
+        ue.mark_s = ue.mark_e = -1;
         break;
 
     case ctrl('v'):
         /* paste block */
-        break;
-
-    case ctrl('x'):
-        /* cut block */
         break;
 
     case ctrl('b'):
@@ -635,11 +639,6 @@ int ue_input(char *key)
         if (ue.mark_e == -1)
             ue.mark_e = ue.cpos;
 
-        break;
-
-    case ctrl('u'):
-        /* unmark selection */
-        ue.mark_s = ue.mark_e = -1;
         break;
 
     case ctrl('q'):
