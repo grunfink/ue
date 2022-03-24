@@ -16,6 +16,7 @@
 struct {
     uint8_t data[DATA_SIZE];    /* the document data */
     uint8_t clip[DATA_SIZE];    /* clipboard */
+    int clip_size;              /* clipboard size */
     char *fname;                /* file name */
     int width;                  /* terminal width */
     int height;                 /* terminal height */
@@ -611,9 +612,8 @@ int ue_input(char *key)
         /* copy block */
         if (ue.mark_s != -1 && ue.mark_e != -1) {
             /* alloc space into clipboard */
-            int sz = ue.mark_e - ue.mark_s;
-            memcpy(ue.clip, &ue.data[ue.mark_s], sz);
-            ue.clip[sz] = '\0';
+            ue.clip_size = ue.mark_e - ue.mark_s;
+            memcpy(ue.clip, &ue.data[ue.mark_s], ue.clip_size);
         }
 
         break;
