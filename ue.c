@@ -21,6 +21,8 @@ struct {
     int vpos;                   /* visual position (first byte shown) */
     int cpos;                   /* cursor position */
     int size;                   /* size of document */
+    int mark_s;                 /* selection mark start */
+    int mark_e;                 /* selection mark end */
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
@@ -622,6 +624,7 @@ int ue_input(char *key)
 
     case ctrl('u'):
         /* unmark selection */
+        ue.mark_s = ue.mark_e = -1;
         break;
 
     case ctrl('q'):
@@ -684,6 +687,9 @@ int ue_main(char *fname)
     raw_tty(1, &tios);
     sigwinch_handler(0);
     startup();
+
+    /* unmark selection */
+    ue_input("\x15");
 
     /* main loop */
     for (;;) {
