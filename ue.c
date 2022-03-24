@@ -418,7 +418,7 @@ void ue_output(void)
     if (ue.refuse_quit) {
         /* refuse quit? say it */
         if (ue.refuse_quit == 1) {
-            printf("file is modified; hit again to force quit");
+            printf("'%s' was modified; hit again to force quit", ue.fname);
             clreol();
             ue.refuse_quit = 2;
         }
