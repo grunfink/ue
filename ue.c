@@ -689,6 +689,12 @@ int ue_input(char *key)
         }
         break;
 
+    case ctrl('d'):
+        /* delete char under the cursor */
+        ue_delete(1);
+
+        break;
+
     default:
         if (key[0] != '\x1b') {
             uint32_t cpoint;

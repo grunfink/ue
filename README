@@ -14,6 +14,7 @@ keys:
 ctrl-a  beginning of line
 ctrl-b  mark selection
 ctrl-c  copy to clipboard
+ctrl-d  delete char
 ctrl-e  end of line
 ctrl-h  move left
 ctrl-j  move down
