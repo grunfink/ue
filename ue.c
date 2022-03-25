@@ -29,6 +29,7 @@ struct {
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
     int refuse_quit;            /* refuse-quit-because-of-file-modified flag */
+    int *ac0;                   /* array of column #0 positions */
 } ue;
 
 
@@ -108,6 +109,9 @@ static void get_tty_size(void)
         ue.width  = 80;
         ue.height = 25;
     }
+
+    /* redim the array of column #0 addresses */
+    ue.ac0 = realloc(ue.ac0, ue.height * 2 * sizeof(int));
 
     ue.sigwinch_received = 0;
 }
@@ -360,20 +364,17 @@ void ue_fix_vpos(void)
         ue.vpos = ue_find_col_0(ue.cpos);
     }
     else {
-        int *ac0, n;
-
-        /* allocate a circular buffer to store a double set of column #0 */
-        ac0 = calloc(ue.height * 2, sizeof(int));
+        int n;
 
         /* fill the first half with current vpos */
         for (n = 0; n < ue.height; n++)
-            ac0[n] = ue.vpos;
+            ue.ac0[n] = ue.vpos;
 
         for (n = 0;; n++) {
             int size;
 
             /* store */
-            ac0[(n + ue.height - 2) % (ue.height * 2)] = ue.vpos;
+            ue.ac0[(n + ue.height - 2) % (ue.height * 2)] = ue.vpos;
 
             /* get the row size */
             size = ue_row_size(ue.vpos) + 1;
@@ -386,9 +387,7 @@ void ue_fix_vpos(void)
         }
 
         /* finally get from the buffer */
-        ue.vpos = ac0[n % (ue.height * 2)];
-
-        free(ac0);
+        ue.vpos = ue.ac0[n % (ue.height * 2)];
     }
 }
 
