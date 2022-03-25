@@ -684,6 +684,18 @@ int ue_input(char *key)
 
         break;
 
+    case ctrl('f'):
+    case ctrl('g'):
+    case ctrl('i'):
+    case ctrl('m'):
+    case ctrl('o'):
+    case ctrl('r'):
+    case ctrl('t'):
+    case ctrl('w'):
+    case ctrl('z'):
+        /* unused keys */
+        break;
+
     default:
         if (key[0] != '\x1b') {
             uint32_t cpoint;
