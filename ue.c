@@ -629,6 +629,11 @@ int ue_input(char *key)
 
     case ctrl('v'):
         /* paste block */
+        if (ue_expand(ue.clip_size)) {
+            memcpy(&ue.data[ue.cpos], ue.clip, ue.clip_size);
+            ue.cpos += ue.clip_size;
+        }
+
         break;
 
     case ctrl('b'):
