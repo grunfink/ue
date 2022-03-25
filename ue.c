@@ -136,8 +136,8 @@ static void sigwinch_handler(int s)
 /* Unicode codepoint to internal representation conversion table,
    which is mostly iso8859-1 with some windows-1252 cherry-picks */
 struct _uc2int {
-    uint32_t cpoint;
-    uint32_t isochar;
+    uint16_t cpoint;
+    uint16_t isochar;
 } uc2int[] = {
     { 0x2014,  0x97 },      /* M-DASH */
     { 0x20ac,  0x80 },      /* EURO SIGN */
