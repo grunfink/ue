@@ -11,20 +11,20 @@ goals:
 
 keys:
 
-ctrl-a  beginning of line
-ctrl-b  mark selection
-ctrl-c  copy to clipboard
-ctrl-d  delete char
-ctrl-e  end of line
-ctrl-h  move left
-ctrl-j  move down
-ctrl-k  move up
-ctrl-l  move right
-ctrl-n  next page
-ctrl-p  previous page
-ctrl-q  quit
-ctrl-s  save document
-ctrl-u  unmark selection
-ctrl-v  paste from clipboard
-ctrl-x  cut to clipboard
-ctrl-y  delete line
+ctrl-a, home    beginning of line
+ctrl-b          mark selection
+ctrl-c          copy to clipboard
+ctrl-d, delete  delete char
+ctrl-e, end     end of line
+ctrl-h, left    move left
+ctrl-j, down    move down
+ctrl-k, up      move up
+ctrl-l, right   move right
+ctrl-n, pgdn    next page
+ctrl-p, pgup    previous page
+ctrl-q          quit
+ctrl-s          save document
+ctrl-u          unmark selection
+ctrl-v          paste from clipboard
+ctrl-x          cut to clipboard
+ctrl-y          delete line
