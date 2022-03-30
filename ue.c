@@ -746,12 +746,16 @@ int ue_input(char *key)
 }
 
 
-int ue_main(char *fname)
-/* edits the file */
+int main(int argc, char *argv[])
 {
     struct termios tios;
 
-    if (load_file(fname))
+    if (argc != 2) {
+        printf("Usage: %s {file to edit}\n", argv[0]);
+        goto end;
+    }
+
+    if (load_file(argv[1]))
         goto end;
 
     /* startup */
@@ -779,16 +783,5 @@ int ue_main(char *fname)
     shutdown();
 
 end:
-    return 0;
-}
-
-
-int main(int argc, char *argv[])
-{
-    if (argc != 2)
-        printf("Usage: %s {file to edit}\n", argv[0]);
-    else
-        ue_main(argv[1]);
-
     return 0;
 }
