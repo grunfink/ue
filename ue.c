@@ -134,7 +134,7 @@ static void sigwinch_handler(int s)
 #define gotoxy(x, y) printf("\033[%d;%dH", y + 1, x + 1)
 #define startup()    printf("\033[?1049h")                // enter alt screen
 #define shutdown()   printf("\033[0;39;49m\033[?1049l\n") // def attr and exit alt scr
-#define clreol()     printf("\033[K")
+#define clreol()     printf("\033[m\033[K")               // no reverse attr and clear to eol
 #define clrscr()     printf("\033[2J")
 
 /* Unicode codepoint to internal representation conversion table,
@@ -401,7 +401,7 @@ void ue_output(void)
 
     if (ue.new_file) {
         /* new file? say it */
-        printf("<new file>");
+        printf("\033[7m<new file>");
         ue.new_file = 0;
     }
     else
@@ -424,7 +424,7 @@ void ue_output(void)
         cx = cy = -1;
 
         for (n = 0, p = ue.vpos; n < ue.height; n++) {
-            int m, size;
+            int m, size, rev = 0;
 
             gotoxy(0, n);
 
@@ -437,6 +437,16 @@ void ue_output(void)
                     if (p == ue.cpos) {
                         cx = m;
                         cy = n;
+                    }
+
+                    /* inside selection block? */
+                    if (ue.mark_e != -1) {
+                        int r = ue.mark_s <= p && p < ue.mark_e;
+
+                        if (r != rev) {
+                            printf(r ? "\033[7m" : "\033[m");
+                            rev = r;
+                        }
                     }
 
                     /* put char */
