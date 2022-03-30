@@ -401,7 +401,7 @@ void ue_output(void)
 
     if (ue.new_file) {
         /* new file? say it */
-        printf("\033[7m<new file>");
+        printf("<new file>");
         ue.new_file = 0;
     }
     else
@@ -520,7 +520,7 @@ void ue_insert(char c)
 int ue_input(char *key)
 /* processes keys */
 {
-    int n = 0;          /* general-purpose variable */
+    int n = 0;          /* general-purpose variable (must be 0) */
     int running = 1;
 
     /* ANSI sequence? do a crude conversion from this table:
@@ -725,13 +725,15 @@ int ue_input(char *key)
         /* unused keys */
         break;
 
+    case '\r':
+        /* ENTER key */
+        ue_insert('\n');
+        break;
+
     default:
         if (key[0] != '\x1b') {
             uint32_t cpoint;
             int s = 0;
-
-            if (key[0] == '\r')
-                key[0] = '\n';
 
             while (*key) {
                 /* decode utf-8 and insert char by char */
