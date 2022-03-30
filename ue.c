@@ -517,11 +517,34 @@ void ue_insert(char c)
 
 #define ctrl(k) ((k) & 31)
 
+struct _ansikey {
+    char *ansikey;      /* ANSI sequence */
+    char key;           /* movement key equivalent */
+} ansikeys[] = {
+    { "\033[A",     ctrl('k') },    /* up */
+    { "\033[B",     ctrl('j') },    /* down */
+    { "\033[C",     ctrl('l') },    /* right */
+    { "\033[D",     ctrl('h') },    /* left */
+    { "\033[5~",    ctrl('p') },    /* pgup */
+    { "\033[6~",    ctrl('n') },    /* pgdn */
+    { "\033[H",     ctrl('a') },    /* home */
+    { "\033[F",     ctrl('e') },    /* end */
+    { "\033[3~",    ctrl('d') },    /* delete */
+};
+
+
 int ue_input(char *key)
 /* processes keys */
 {
     int n = 0;          /* general-purpose variable */
     int running = 1;
+
+    for (n = 0; n < sizeof(ansikeys) / sizeof(struct _ansikey); n++) {
+        if (strcmp(key, ansikeys[n].ansikey) == 0) {
+            key[0] = ansikeys[n].key;
+            break;
+        }
+    }
 
     switch (key[0]) {
     case ctrl('l'):
