@@ -717,7 +717,6 @@ int ue_input(char *key)
     case ctrl('f'):
     case ctrl('g'):
     case ctrl('i'):
-    case ctrl('m'):
     case ctrl('o'):
     case ctrl('r'):
     case ctrl('t'):
