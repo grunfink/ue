@@ -19,16 +19,16 @@
 
 struct {
     uint8_t data[DATA_SIZE];    /* the document data */
-    uint8_t clip[DATA_SIZE];    /* clipboard */
-    int clip_size;              /* clipboard size */
-    char *fname;                /* file name */
-    int width;                  /* terminal width */
-    int height;                 /* terminal height */
     int vpos;                   /* visual position (first byte shown) */
     int cpos;                   /* cursor position */
     int size;                   /* size of document */
     int mark_s;                 /* selection mark start */
     int mark_e;                 /* selection mark end */
+    uint8_t clip[DATA_SIZE];    /* clipboard */
+    int clip_size;              /* clipboard size */
+    char *fname;                /* file name */
+    int width;                  /* terminal width */
+    int height;                 /* terminal height */
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
     int modified;               /* modified-since-saving flag */
