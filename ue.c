@@ -497,6 +497,10 @@ int ue_expand(int size)
 {
     int ret = 0;
 
+    /* if there is a block, delete it */
+    if (ue.mark_e != -1)
+        ue_delete(0);
+
     if (ue.size + size < DATA_SIZE) {
         int n;
 
