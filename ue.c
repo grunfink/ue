@@ -732,17 +732,15 @@ int ue_input(char *key)
         /* unused keys */
         break;
 
-    case '\r':
-        /* ENTER key */
-        ue_insert('\n');
-        break;
-
     default:
         if (key[0] != '\x1b') {
             uint32_t cpoint;
             int s = 0;
 
             while (*key) {
+                if (*key == '\r')
+                    *key = '\n';
+
                 /* decode utf-8 and insert char by char */
                 if (utf8_to_internal(&cpoint, &s, *key++) == 0)
                     ue_insert(cpoint);
