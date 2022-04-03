@@ -9,7 +9,13 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#ifndef TAB_SIZE
+#define TAB_SIZE 4
+#endif
+
+#ifndef DATA_SIZE
 #define DATA_SIZE 32768
+#endif
 
 struct {
     uint8_t data[DATA_SIZE];    /* the document data */
@@ -731,7 +737,7 @@ int ue_input(char *key)
 
     case '\t':
         /* tab */
-        n = 4 - (ue.cpos - ue_find_col_0(ue.cpos)) % 4;
+        n = TAB_SIZE - (ue.cpos - ue_find_col_0(ue.cpos)) % TAB_SIZE;
         while (n--)
             ue_insert(' ');
 
