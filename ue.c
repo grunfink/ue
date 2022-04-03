@@ -469,9 +469,17 @@ void ue_output(void)
 void ue_delete(int count)
 /* deletes count bytes from the cursor position */
 {
-    int n;
+    /* if there is a selection block, delete it */
+    if (ue.mark_e != -1) {
+        ue.cpos = ue.mark_s;
+        count = ue.mark_e - ue.mark_s;
+
+        ue.mark_s = ue.mark_e = -1;
+    }
 
     if (ue.cpos < ue.size) {
+        int n;
+
         /* move memory 'down' */
         for (n = 0; n < ue.size - ue.cpos; n++)
             ue.data[ue.cpos + n] = ue.data[ue.cpos + n + count];
@@ -704,13 +712,8 @@ int ue_input(char *key)
         /* fall through */
 
     case ctrl('d'):
-        /* delete char under the cursor */
-        if (ue.mark_e != -1) {
-            ue.cpos = ue.mark_s;
-            ue_delete(ue.mark_e - ue.mark_s);
-        }
-        else
-            ue_delete(1);
+        /* delete char under the cursor (or the selected block) */
+        ue_delete(1);
 
         break;
 
