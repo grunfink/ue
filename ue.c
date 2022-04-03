@@ -408,7 +408,7 @@ void ue_output(void)
     if (ue.refuse_quit) {
         /* refuse quit? say it */
         if (ue.refuse_quit == 1) {
-            printf("'%s' was modified; hit again to force quit", ue.fname);
+            printf("ctrl-q again to force quit");
             clreol();
             ue.refuse_quit = 2;
         }
@@ -731,7 +731,6 @@ int ue_input(char *key)
         /* unused keys */
         break;
 
-#if 0
     case '\t':
         /* tab */
         n = 4 - (ue.cpos - ue_find_col_0(ue.cpos)) % 4;
@@ -739,7 +738,6 @@ int ue_input(char *key)
             ue_insert(' ');
 
         break;
-#endif
 
     default:
         if (key[0] != '\x1b') {
@@ -767,7 +765,7 @@ int main(int argc, char *argv[])
     struct termios tios;
 
     if (argc != 2) {
-        printf("Usage: %s {file to edit}\n", argv[0]);
+        printf("Usage: ue {file to edit}\n");
         goto end;
     }
 
