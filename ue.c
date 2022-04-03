@@ -7,8 +7,6 @@
 #include <signal.h>
 #include <string.h>
 #include <stdlib.h>
-#include <wchar.h>
-#include <sys/time.h>
 #include <stdint.h>
 
 #define DATA_SIZE 32768
