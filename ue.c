@@ -723,7 +723,6 @@ int ue_input(char *key)
 
     case ctrl('f'):
     case ctrl('g'):
-    case ctrl('i'):
     case ctrl('o'):
     case ctrl('r'):
     case ctrl('t'):
@@ -731,6 +730,16 @@ int ue_input(char *key)
     case ctrl('z'):
         /* unused keys */
         break;
+
+#if 0
+    case '\t':
+        /* tab */
+        n = 4 - (ue.cpos - ue_find_col_0(ue.cpos)) % 4;
+        while (n--)
+            ue_insert(' ');
+
+        break;
+#endif
 
     default:
         if (key[0] != '\x1b') {
