@@ -5,8 +5,8 @@ ue: ue.c
 test: ue
 	cp ue.o ue-strip.o
 	strip ue-strip.o
-	echo "object size: `stat -c '%s' ue-strip.o`"
-	@[ `stat -c '%s' ue-strip.o` -le 5120 ] && echo "OK!" || echo "TOO BIG!!!"
+	@wc -c ue-strip.o
+	@[ `wc -c ue-strip.o | cut -f1 -d ' '` -le 5120 ] && echo "OK!" || echo "TOO BIG!!!"
 
 clean:
 	rm -f ue *.o
