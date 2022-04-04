@@ -20,7 +20,7 @@
 #endif
 
 #ifndef UNDO_LEVELS
-#define UNDO_LEVELS 32
+#define UNDO_LEVELS 64
 #endif
 
 /* edit data */
@@ -506,8 +506,8 @@ void ue_snap(void)
     uem.history++;
 
     /* one more level 'undoable' */
-    if (uem.undone < UNDO_LEVELS)
-        uem.undone++;
+    if (uem.undo < UNDO_LEVELS)
+        uem.undo++;
 
     /* point to new snapshot */
     ue = &uem.e[uem.history % UNDO_LEVELS];
@@ -520,9 +520,9 @@ void ue_snap(void)
 void ue_undo(void)
 /* undoes last snapshot */
 {
-    if (uem.undone > 0) {
+    if (uem.undo > 0) {
         /* one less level available */
-        uem.undone--;
+        uem.undo--;
 
         /* move back in history */
         uem.history--;
@@ -714,6 +714,8 @@ int ue_input(char *key)
 
     case ctrl('x'):
         /* cut block */
+        ue_snap();
+
         n = 1;
 
         /* fallthrough */
@@ -739,6 +741,8 @@ int ue_input(char *key)
 
     case ctrl('v'):
         /* paste block */
+        ue_snap();
+
         if (ue_expand(uem.clip_size)) {
             memcpy(&ue->data[ue->cpos], uem.clip, uem.clip_size);
             ue->cpos += uem.clip_size;
@@ -771,6 +775,8 @@ int ue_input(char *key)
 
     case ctrl('y'):
         /* delete line */
+        ue_snap();
+
         ue->cpos = ue_find_col_0(ue->cpos);
         ue_delete(ue_row_size(ue->cpos) + 1);
         break;
@@ -786,6 +792,7 @@ int ue_input(char *key)
 
     case ctrl('d'):
         /* delete char under the cursor (or the selected block) */
+        ue_snap();
         ue_delete(1);
 
         break;
@@ -796,15 +803,22 @@ int ue_input(char *key)
     case ctrl('r'):
     case ctrl('t'):
     case ctrl('w'):
-    case ctrl('z'):
         /* unused keys */
         break;
 
     case '\t':
         /* tab */
+        ue_snap();
+
         n = TAB_SIZE - (ue->cpos - ue_find_col_0(ue->cpos)) % TAB_SIZE;
         while (n--)
             ue_insert(' ');
+
+        break;
+
+    case ctrl('z'):
+        /* undo */
+        ue_undo();
 
         break;
 
@@ -812,6 +826,8 @@ int ue_input(char *key)
         if (key[0] != '\x1b') {
             uint32_t cpoint;
             int s = 0;
+
+            ue_snap();
 
             while (*key) {
                 if (*key == '\r')
