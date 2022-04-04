@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define VERSION "1.00"
+#define VERSION "1.00-wrk"
 
 #ifndef TAB_SIZE
 #define TAB_SIZE 4
@@ -19,6 +19,7 @@
 #define DATA_SIZE 32768
 #endif
 
+/* edit data */
 struct {
     uint8_t data[DATA_SIZE];    /* the document data */
     int vpos;                   /* visual position (first byte shown) */
@@ -26,6 +27,11 @@ struct {
     int size;                   /* size of document */
     int mark_s;                 /* selection mark start */
     int mark_e;                 /* selection mark end */
+    int modified;               /* modified-since-saving flag */
+} ue;
+
+/* edit metadata */
+struct {
     uint8_t clip[DATA_SIZE];    /* clipboard */
     int clip_size;              /* clipboard size */
     char *fname;                /* file name */
@@ -33,10 +39,9 @@ struct {
     int height;                 /* terminal height */
     int sigwinch_received;      /* sigwinch-received flag */
     int new_file;               /* file-is-new flag */
-    int modified;               /* modified-since-saving flag */
     int refuse_quit;            /* refuse-quit-because-of-file-modified flag */
     int *ac0;                   /* array of column #0 positions */
-} ue;
+} uem;
 
 
 /** ANSI **/
@@ -110,18 +115,18 @@ static void get_tty_size(void)
     if (something_waiting(50)) {
         buffer = read_string();
 
-        sscanf(buffer, "\033[%d;%dR", &ue.height, &ue.width);
+        sscanf(buffer, "\033[%d;%dR", &uem.height, &uem.width);
     }
     else {
         /* terminal didn't report; let's hope it's the default */
-        ue.width  = 80;
-        ue.height = 25;
+        uem.width  = 80;
+        uem.height = 25;
     }
 
     /* redim the array of column #0 addresses */
-    ue.ac0 = realloc(ue.ac0, ue.height * 2 * sizeof(int));
+    uem.ac0 = realloc(uem.ac0, uem.height * 2 * sizeof(int));
 
-    ue.sigwinch_received = 0;
+    uem.sigwinch_received = 0;
 }
 
 
@@ -130,7 +135,7 @@ static void sigwinch_handler(int s)
 {
     struct sigaction sa;
 
-    ue.sigwinch_received = 1;
+    uem.sigwinch_received = 1;
 
     /* (re)attach signal */
     memset(&sa, '\0', sizeof(sa));
@@ -228,7 +233,7 @@ int load_file(char *fname)
     int ret = 0;
 
     /* store file name */
-    ue.fname = fname;
+    uem.fname = fname;
 
     if ((f = fopen(fname, "rb")) != NULL) {
         int c;
@@ -245,7 +250,7 @@ int load_file(char *fname)
     }
     else
         /* file is not (yet) on disk */
-        ue.new_file = 1;
+        uem.new_file = 1;
 
     if (ue.size == DATA_SIZE) {
         printf("ERROR: file too big\n");
@@ -328,7 +333,7 @@ int ue_row_size(int pos)
     int size = 0;
     int bpos = -1;
 
-    while (pos < ue.size && ue.data[pos] != '\n' && size < ue.width) {
+    while (pos < ue.size && ue.data[pos] != '\n' && size < uem.width) {
         /* remember the position of a blank */
         if (ue.data[pos] == ' ')
             bpos = size;
@@ -338,7 +343,7 @@ int ue_row_size(int pos)
     }
 
     /* if full size and a blank was seen, set it */
-    if (size == ue.width && bpos != -1)
+    if (size == uem.width && bpos != -1)
         size = bpos;
 
     return size;
@@ -380,14 +385,14 @@ void ue_fix_vpos(void)
         int n;
 
         /* fill the first half with current vpos */
-        for (n = 0; n < ue.height; n++)
-            ue.ac0[n] = ue.vpos;
+        for (n = 0; n < uem.height; n++)
+            uem.ac0[n] = ue.vpos;
 
         for (n = 0;; n++) {
             int size;
 
             /* store */
-            ue.ac0[(n + ue.height - 2) % (ue.height * 2)] = ue.vpos;
+            uem.ac0[(n + uem.height - 2) % (uem.height * 2)] = ue.vpos;
 
             /* get the row size */
             size = ue_row_size(ue.vpos) + 1;
@@ -400,7 +405,7 @@ void ue_fix_vpos(void)
         }
 
         /* finally get from the buffer */
-        ue.vpos = ue.ac0[n % (ue.height * 2)];
+        ue.vpos = uem.ac0[n % (uem.height * 2)];
     }
 }
 
@@ -414,23 +419,23 @@ void ue_output(void)
 
     gotoxy(0, 0);
 
-    if (ue.new_file) {
+    if (uem.new_file) {
         /* new file? say it */
         printf("<new file>");
-        ue.new_file = 0;
+        uem.new_file = 0;
     }
     else
-    if (ue.refuse_quit) {
+    if (uem.refuse_quit) {
         /* refuse quit? say it */
-        if (ue.refuse_quit == 1) {
+        if (uem.refuse_quit == 1) {
             printf("ctrl-q again to force quit");
             clreol();
-            ue.refuse_quit = 2;
+            uem.refuse_quit = 2;
         }
         else
         /* already notified but still here? user didn't quit */
-        if (ue.refuse_quit == 2)
-            ue.refuse_quit = 0;
+        if (uem.refuse_quit == 2)
+            uem.refuse_quit = 0;
     }
     else {
         int n, p;
@@ -438,7 +443,7 @@ void ue_output(void)
 
         cx = cy = -1;
 
-        for (n = 0, p = ue.vpos; n < ue.height; n++) {
+        for (n = 0, p = ue.vpos; n < uem.height; n++) {
             int m, size, rev = 0;
 
             gotoxy(0, n);
@@ -645,21 +650,21 @@ int ue_input(char *key)
 
     case ctrl('p'):
         /* page up */
-        for (n = 0; n < ue.height - 1; n++)
+        for (n = 0; n < uem.height - 1; n++)
             ue_input("\x0b");
 
         break;
 
     case ctrl('n'):
         /* page down */
-        for (n = 0; n < ue.height - 1; n++)
+        for (n = 0; n < uem.height - 1; n++)
             ue_input("\x0a");
 
         break;
 
     case ctrl('s'):
         /* save file */
-        save_file(ue.fname);
+        save_file(uem.fname);
         break;
 
     case ctrl('x'):
@@ -672,8 +677,8 @@ int ue_input(char *key)
         /* copy block */
         if (ue.mark_e != -1) {
             /* alloc space into clipboard */
-            ue.clip_size = ue.mark_e - ue.mark_s;
-            memcpy(ue.clip, &ue.data[ue.mark_s], ue.clip_size);
+            uem.clip_size = ue.mark_e - ue.mark_s;
+            memcpy(uem.clip, &ue.data[ue.mark_s], uem.clip_size);
 
             /* cut? delete block */
             if (n)
@@ -689,9 +694,9 @@ int ue_input(char *key)
 
     case ctrl('v'):
         /* paste block */
-        if (ue_expand(ue.clip_size)) {
-            memcpy(&ue.data[ue.cpos], ue.clip, ue.clip_size);
-            ue.cpos += ue.clip_size;
+        if (ue_expand(uem.clip_size)) {
+            memcpy(&ue.data[ue.cpos], uem.clip, uem.clip_size);
+            ue.cpos += uem.clip_size;
         }
 
         break;
@@ -709,10 +714,10 @@ int ue_input(char *key)
     case ctrl('q'):
         /* quit (if not modified) */
         if (ue.modified) {
-            if (ue.refuse_quit == 2)
+            if (uem.refuse_quit == 2)
                 running = 0;
             else
-                ue.refuse_quit = 1;
+                uem.refuse_quit = 1;
         }
         else
             running = 0;
@@ -802,7 +807,7 @@ int main(int argc, char *argv[])
     /* main loop */
     for (;;) {
         /* read terminal size, if new or changed */
-        if (ue.sigwinch_received)
+        if (uem.sigwinch_received)
             get_tty_size();
 
         ue_output();
