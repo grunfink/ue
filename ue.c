@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#define VERSION "1.00"
+
 #ifndef TAB_SIZE
 #define TAB_SIZE 4
 #endif
@@ -36,6 +38,8 @@ struct {
     int *ac0;                   /* array of column #0 positions */
 } ue;
 
+
+/** ANSI **/
 
 static void raw_tty(int start, struct termios *so)
 /* sets/unsets stdin in raw mode */
@@ -76,7 +80,7 @@ static int something_waiting(int msecs)
 }
 
 
-char *read_string(void)
+static char *read_string(void)
 /* reads an ansi string, waiting in the first char */
 {
     static char buf[256];
@@ -140,6 +144,9 @@ static void sigwinch_handler(int s)
 #define shutdown()   printf("\033[0;39;49m\033[?1049l\n") // def attr and exit alt scr
 #define clreol()     printf("\033[m\033[K")               // no reverse attr and clear to eol
 #define clrscr()     printf("\033[2J")
+
+
+/** encoding **/
 
 /* Unicode codepoint to internal representation conversion table,
    which is mostly iso8859-1 with some windows-1252 cherry-picks */
@@ -296,6 +303,8 @@ void save_file(char *fname)
 }
 
 
+/** tools **/
+
 int ue_find_bol(int pos)
 /* finds the beginning of the line */
 {
@@ -396,6 +405,8 @@ void ue_fix_vpos(void)
 }
 
 
+/** painting **/
+
 void ue_output(void)
 /* paint the document to the screen */
 {
@@ -470,6 +481,8 @@ void ue_output(void)
 }
 
 
+/** editing **/
+
 void ue_delete(int count)
 /* deletes count bytes from the cursor position */
 {
@@ -530,6 +543,8 @@ void ue_insert(char c)
         ue.data[ue.cpos++] = c;
 }
 
+
+/** input **/
 
 #define ctrl(k) ((k) & 31)
 
