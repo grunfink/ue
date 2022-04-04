@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define VERSION "1.00-wrk"
+#define VERSION "1.01"
 
 #ifndef TAB_SIZE
 #define TAB_SIZE 4

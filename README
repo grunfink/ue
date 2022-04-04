@@ -3,7 +3,8 @@
 goals:
 
 * stripped, size-optimized size of Linux gcc amd64 object < 6K (6144 bytes)
-* undo
+* fixed maximum file size (changeable by a compile-time option)
+* undo (fixed levels, changeable by a compile-time option)
 * copy/paste
 * expects an utf-8 environment (both ANSI terminal and documents)
 * 1 file
