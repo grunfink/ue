@@ -2,12 +2,12 @@
 
 goals:
 
-* stripped, size-optimized size of Linux gcc amd64 object < 5K (5120 bytes)
+* stripped, size-optimized size of Linux gcc amd64 object < 6K (6144 bytes)
+* undo
 * copy/paste
 * expects an utf-8 environment (both ANSI terminal and documents)
 * 1 file
 * no syntax highlight
-* no undo
 
 keys:
 
