@@ -37,6 +37,8 @@ struct snap {
 /* edit metadata */
 struct {
     struct snap e[UNDO_LEVELS]; /* edit data */
+    int history;                /* snap history */
+    int undo;                   /* levels available to undo */
     uint8_t clip[DATA_SIZE];    /* clipboard */
     int clip_size;              /* clipboard size */
     char *fname;                /* file name */
@@ -494,6 +496,42 @@ void ue_output(void)
 
 
 /** editing **/
+
+void ue_snap(void)
+/* takes a new 'snapshot' (for undoing) */
+{
+    struct snap *oue = ue;
+
+    /* move forward */
+    uem.history++;
+
+    /* one more level 'undoable' */
+    if (uem.undone < UNDO_LEVELS)
+        uem.undone++;
+
+    /* point to new snapshot */
+    ue = &uem.e[uem.history % UNDO_LEVELS];
+
+    /* copy from previous */
+    *ue = *oue;
+}
+
+
+void ue_undo(void)
+/* undoes last snapshot */
+{
+    if (uem.undone > 0) {
+        /* one less level available */
+        uem.undone--;
+
+        /* move back in history */
+        uem.history--;
+
+        /* point to this snapshot */
+        ue = &uem.e[uem.history % UNDO_LEVELS];
+    }
+}
+
 
 void ue_delete(int count)
 /* deletes count bytes from the cursor position */

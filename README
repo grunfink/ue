@@ -28,3 +28,4 @@ ctrl-u          unmark selection
 ctrl-v          paste from clipboard
 ctrl-x          cut to clipboard
 ctrl-y          delete line
+ctrl-z          undo
