@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#define VERSION "1.01"
+#define VERSION "1.01-wrk"
 
 #ifndef TAB_SIZE
 #define TAB_SIZE 4
@@ -23,7 +23,6 @@
 #define UNDO_LEVELS 64
 #endif
 
-/* edit data */
 struct snap {
     uint8_t data[DATA_SIZE];    /* the document data */
     int vpos;                   /* visual position (first byte shown) */
@@ -34,9 +33,9 @@ struct snap {
     int modified;               /* modified-since-saving flag */
 };
 
-/* edit metadata */
 struct {
-    struct snap e[UNDO_LEVELS]; /* edit data */
+    struct snap e;              /* working snap */
+    struct snap s[UNDO_LEVELS]; /* previous snapshots of e */
     int history;                /* snap history */
     int undo;                   /* levels available to undo */
     uint8_t clip[DATA_SIZE];    /* clipboard */
@@ -48,9 +47,7 @@ struct {
     int new_file;               /* file-is-new flag */
     int refuse_quit;            /* refuse-quit-because-of-file-modified flag */
     int *ac0;                   /* array of column #0 positions */
-} uem;
-
-struct snap *ue = &uem.e[0];
+} ue;
 
 
 /** ANSI **/
@@ -124,18 +121,18 @@ static void get_tty_size(void)
     if (something_waiting(50)) {
         buffer = read_string();
 
-        sscanf(buffer, "\033[%d;%dR", &uem.height, &uem.width);
+        sscanf(buffer, "\033[%d;%dR", &ue.height, &ue.width);
     }
     else {
         /* terminal didn't report; let's hope it's the default */
-        uem.width  = 80;
-        uem.height = 25;
+        ue.width  = 80;
+        ue.height = 25;
     }
 
     /* redim the array of column #0 addresses */
-    uem.ac0 = realloc(uem.ac0, uem.height * 2 * sizeof(int));
+    ue.ac0 = realloc(ue.ac0, ue.height * 2 * sizeof(int));
 
-    uem.sigwinch_received = 0;
+    ue.sigwinch_received = 0;
 }
 
 
@@ -144,7 +141,7 @@ static void sigwinch_handler(int s)
 {
     struct sigaction sa;
 
-    uem.sigwinch_received = 1;
+    ue.sigwinch_received = 1;
 
     /* (re)attach signal */
     memset(&sa, '\0', sizeof(sa));
@@ -242,26 +239,26 @@ int load_file(char *fname)
     int ret = 0;
 
     /* store file name */
-    uem.fname = fname;
+    ue.fname = fname;
 
     if ((f = fopen(fname, "rb")) != NULL) {
         int c;
         uint32_t cpoint;
         int ustate = 0;
 
-        while (ue->size < DATA_SIZE && (c = fgetc(f)) != EOF) {
+        while (ue.e.size < DATA_SIZE && (c = fgetc(f)) != EOF) {
             /* keep decoding utf8 until a full codepoint is found */
             if (utf8_to_internal(&cpoint, &ustate, c) == 0)
-                ue->data[ue->size++] = cpoint;
+                ue.e.data[ue.e.size++] = cpoint;
         }
 
         fclose(f);
     }
     else
         /* file is not (yet) on disk */
-        uem.new_file = 1;
+        ue.new_file = 1;
 
-    if (ue->size == DATA_SIZE) {
+    if (ue.e.size == DATA_SIZE) {
         printf("ERROR: file too big\n");
         ret = 1;
     }
@@ -307,12 +304,12 @@ void save_file(char *fname)
     if ((f = fopen(fname, "wb")) != NULL) {
         int n;
 
-        for (n = 0; n < ue->size; n++)
-            put_internal_to_file(ue->data[n], f);
+        for (n = 0; n < ue.e.size; n++)
+            put_internal_to_file(ue.e.data[n], f);
 
         fclose(f);
 
-        ue->modified = 0;
+        ue.e.modified = 0;
     }
 }
 
@@ -324,11 +321,11 @@ int ue_find_bol(int pos)
 {
     if (pos) {
         /* if it's over an EOL, move backwards */
-        if (ue->data[pos] == '\n')
+        if (ue.e.data[pos] == '\n')
             pos--;
 
         /* find it */
-        while (pos && ue->data[pos] != '\n')
+        while (pos && ue.e.data[pos] != '\n')
             pos--;
     }
 
@@ -342,9 +339,9 @@ int ue_row_size(int pos)
     int size = 0;
     int bpos = -1;
 
-    while (pos < ue->size && ue->data[pos] != '\n' && size < uem.width) {
+    while (pos < ue.e.size && ue.e.data[pos] != '\n' && size < ue.width) {
         /* remember the position of a blank */
-        if (ue->data[pos] == ' ')
+        if (ue.e.data[pos] == ' ')
             bpos = size;
 
         size++;
@@ -352,7 +349,7 @@ int ue_row_size(int pos)
     }
 
     /* if full size and a blank was seen, set it */
-    if (size == uem.width && bpos != -1)
+    if (size == ue.width && bpos != -1)
         size = bpos;
 
     return size;
@@ -367,7 +364,7 @@ int ue_find_col_0(int pos)
     /* find the beginning of the real line */
     col0 = ue_find_bol(pos);
 
-    while (col0 < ue->size) {
+    while (col0 < ue.e.size) {
         /* get row size from here */
         int size = ue_row_size(col0) + 1;
 
@@ -386,35 +383,35 @@ int ue_find_col_0(int pos)
 void ue_fix_vpos(void)
 /* fixes the visual position */
 {
-    if (ue->cpos < ue->vpos) {
+    if (ue.e.cpos < ue.e.vpos) {
         /* cursor above first character? just get column #0 */
-        ue->vpos = ue_find_col_0(ue->cpos);
+        ue.e.vpos = ue_find_col_0(ue.e.cpos);
     }
     else {
         int n;
 
         /* fill the first half with current vpos */
-        for (n = 0; n < uem.height; n++)
-            uem.ac0[n] = ue->vpos;
+        for (n = 0; n < ue.height; n++)
+            ue.ac0[n] = ue.e.vpos;
 
         for (n = 0;; n++) {
             int size;
 
             /* store */
-            uem.ac0[(n + uem.height - 2) % (uem.height * 2)] = ue->vpos;
+            ue.ac0[(n + ue.height - 2) % (ue.height * 2)] = ue.e.vpos;
 
             /* get the row size */
-            size = ue_row_size(ue->vpos) + 1;
+            size = ue_row_size(ue.e.vpos) + 1;
 
             /* if cpos is in this range, done */
-            if (ue->vpos <= ue->cpos && ue->cpos <= ue->vpos + size)
+            if (ue.e.vpos <= ue.e.cpos && ue.e.cpos <= ue.e.vpos + size)
                 break;
 
-            ue->vpos += size;
+            ue.e.vpos += size;
         }
 
         /* finally get from the buffer */
-        ue->vpos = uem.ac0[n % (uem.height * 2)];
+        ue.e.vpos = ue.ac0[n % (ue.height * 2)];
     }
 }
 
@@ -428,23 +425,23 @@ void ue_output(void)
 
     gotoxy(0, 0);
 
-    if (uem.new_file) {
+    if (ue.new_file) {
         /* new file? say it */
         printf("<new file>");
-        uem.new_file = 0;
+        ue.new_file = 0;
     }
     else
-    if (uem.refuse_quit) {
+    if (ue.refuse_quit) {
         /* refuse quit? say it */
-        if (uem.refuse_quit == 1) {
+        if (ue.refuse_quit == 1) {
             printf("ctrl-q again to force quit");
             clreol();
-            uem.refuse_quit = 2;
+            ue.refuse_quit = 2;
         }
         else
         /* already notified but still here? user didn't quit */
-        if (uem.refuse_quit == 2)
-            uem.refuse_quit = 0;
+        if (ue.refuse_quit == 2)
+            ue.refuse_quit = 0;
     }
     else {
         int n, p;
@@ -452,25 +449,25 @@ void ue_output(void)
 
         cx = cy = -1;
 
-        for (n = 0, p = ue->vpos; n < uem.height; n++) {
+        for (n = 0, p = ue.e.vpos; n < ue.height; n++) {
             int m, size, rev = 0;
 
             gotoxy(0, n);
 
-            if (p <= ue->size) {
+            if (p <= ue.e.size) {
                 /* get size of row */
                 size = ue_row_size(p);
 
                 for (m = 0; m <= size; m++) {
                     /* cursor position? store coords */
-                    if (p == ue->cpos) {
+                    if (p == ue.e.cpos) {
                         cx = m;
                         cy = n;
                     }
 
                     /* inside selection block? */
-                    if (ue->mark_e != -1) {
-                        int r = ue->mark_s <= p && p < ue->mark_e;
+                    if (ue.e.mark_e != -1) {
+                        int r = ue.e.mark_s <= p && p < ue.e.mark_e;
 
                         if (r != rev) {
                             printf(r ? "\033[7m" : "\033[m");
@@ -479,7 +476,7 @@ void ue_output(void)
                     }
 
                     /* put char */
-                    int c = ue->data[p++];
+                    int c = ue.e.data[p++];
                     put_internal_to_file(c == '\n' ? ' ' : c, stdout);
                 }
             }
@@ -498,37 +495,32 @@ void ue_output(void)
 /** editing **/
 
 void ue_snap(void)
-/* takes a new 'snapshot' (for undoing) */
+/* takes a new snapshot (for undoing) */
 {
-    struct snap *oue = ue;
+    /* copy */
+    ue.s[ue.history % UNDO_LEVELS] = ue.e;
 
     /* move forward */
-    uem.history++;
+    ue.history++;
 
     /* one more level 'undoable' */
-    if (uem.undo < UNDO_LEVELS)
-        uem.undo++;
-
-    /* point to new snapshot */
-    ue = &uem.e[uem.history % UNDO_LEVELS];
-
-    /* copy from previous */
-    *ue = *oue;
+    if (ue.undo < UNDO_LEVELS)
+        ue.undo++;
 }
 
 
 void ue_undo(void)
-/* undoes last snapshot */
+/* recovers the edition state from a previous snapshot */
 {
-    if (uem.undo > 0) {
+    if (ue.undo > 0) {
         /* one less level available */
-        uem.undo--;
+        ue.undo--;
 
         /* move back in history */
-        uem.history--;
+        ue.history--;
 
-        /* point to this snapshot */
-        ue = &uem.e[uem.history % UNDO_LEVELS];
+        /* copy */
+        ue.e = ue.s[ue.history % UNDO_LEVELS];
     }
 }
 
@@ -537,24 +529,24 @@ void ue_delete(int count)
 /* deletes count bytes from the cursor position */
 {
     /* if there is a selection block, delete it */
-    if (ue->mark_e != -1) {
-        ue->cpos = ue->mark_s;
-        count = ue->mark_e - ue->mark_s;
+    if (ue.e.mark_e != -1) {
+        ue.e.cpos = ue.e.mark_s;
+        count = ue.e.mark_e - ue.e.mark_s;
 
-        ue->mark_s = ue->mark_e = -1;
+        ue.e.mark_s = ue.e.mark_e = -1;
     }
 
-    if (ue->cpos < ue->size) {
+    if (ue.e.cpos < ue.e.size) {
         int n;
 
         /* move memory 'down' */
-        for (n = 0; n < ue->size - ue->cpos; n++)
-            ue->data[ue->cpos + n] = ue->data[ue->cpos + n + count];
+        for (n = 0; n < ue.e.size - ue.e.cpos; n++)
+            ue.e.data[ue.e.cpos + n] = ue.e.data[ue.e.cpos + n + count];
 
         /* decrease size */
-        ue->size -= count;
+        ue.e.size -= count;
 
-        ue->modified++;
+        ue.e.modified++;
     }
 }
 
@@ -565,20 +557,20 @@ int ue_expand(int size)
     int ret = 0;
 
     /* if there is a block, delete it */
-    if (ue->mark_e != -1)
+    if (ue.e.mark_e != -1)
         ue_delete(0);
 
-    if (ue->size + size < DATA_SIZE) {
+    if (ue.e.size + size < DATA_SIZE) {
         int n;
 
         /* move memory 'up' */
-        for (n = ue->size - ue->cpos; n > 0; n--)
-            ue->data[ue->cpos + n] = ue->data[ue->cpos + n - size];
+        for (n = ue.e.size - ue.e.cpos; n > 0; n--)
+            ue.e.data[ue.e.cpos + n] = ue.e.data[ue.e.cpos + n - size];
 
         /* increase size */
-        ue->size += size;
+        ue.e.size += size;
 
-        ue->modified++;
+        ue.e.modified++;
         ret++;
     }
 
@@ -590,7 +582,7 @@ void ue_insert(char c)
 /* inserts a byte into the cursor position */
 {
     if (ue_expand(1))
-        ue->data[ue->cpos++] = c;
+        ue.e.data[ue.e.cpos++] = c;
 }
 
 
@@ -627,26 +619,26 @@ int ue_input(char *key)
     switch (key[0]) {
     case ctrl('l'):
         /* move right */
-        if (ue->cpos < ue->size)
-            ue->cpos++;
+        if (ue.e.cpos < ue.e.size)
+            ue.e.cpos++;
         break;
 
     case ctrl('h'):
         /* move left */
-        if (ue->cpos > 0)
-            ue->cpos--;
+        if (ue.e.cpos > 0)
+            ue.e.cpos--;
         break;
 
     case ctrl('a'):
         /* beginning of row */
-        ue->cpos = ue_find_col_0(ue->cpos);
+        ue.e.cpos = ue_find_col_0(ue.e.cpos);
 
         break;
 
     case ctrl('e'):
         /* end of row */
-        ue->cpos = ue_find_col_0(ue->cpos);
-        ue->cpos += ue_row_size(ue->cpos);
+        ue.e.cpos = ue_find_col_0(ue.e.cpos);
+        ue.e.cpos += ue_row_size(ue.e.cpos);
 
         break;
 
@@ -656,8 +648,8 @@ int ue_input(char *key)
             int col0;
 
             /* not at BOF? */
-            if ((col0 = ue_find_col_0(ue->cpos))) {
-                int col = ue->cpos - col0;
+            if ((col0 = ue_find_col_0(ue.e.cpos))) {
+                int col = ue.e.cpos - col0;
                 int size;
 
                 /* find the col0 of the previous row */
@@ -665,7 +657,7 @@ int ue_input(char *key)
 
                 /* move to previous column or end of row */
                 size = ue_row_size(col0);
-                ue->cpos = col0 + (col < size ? col : size);
+                ue.e.cpos = col0 + (col < size ? col : size);
             }
         }
 
@@ -676,18 +668,18 @@ int ue_input(char *key)
         {
             int col0, col, size;
 
-            col0 = ue_find_col_0(ue->cpos);
-            col  = ue->cpos - col0;
+            col0 = ue_find_col_0(ue.e.cpos);
+            col  = ue.e.cpos - col0;
             size = ue_row_size(col0);
 
             /* not at EOF? */
-            if (col0 + size < ue->size) {
+            if (col0 + size < ue.e.size) {
                 /* move to the beginning of the next line */
-                ue->cpos = col0 + size + 1;
+                ue.e.cpos = col0 + size + 1;
 
                 /* move to previous column or end of row */
-                size = ue_row_size(ue->cpos);
-                ue->cpos += (col < size ? col : size);
+                size = ue_row_size(ue.e.cpos);
+                ue.e.cpos += (col < size ? col : size);
             }
         }
 
@@ -695,21 +687,21 @@ int ue_input(char *key)
 
     case ctrl('p'):
         /* page up */
-        for (n = 0; n < uem.height - 1; n++)
+        for (n = 0; n < ue.height - 1; n++)
             ue_input("\x0b");
 
         break;
 
     case ctrl('n'):
         /* page down */
-        for (n = 0; n < uem.height - 1; n++)
+        for (n = 0; n < ue.height - 1; n++)
             ue_input("\x0a");
 
         break;
 
     case ctrl('s'):
         /* save file */
-        save_file(uem.fname);
+        save_file(ue.fname);
         break;
 
     case ctrl('x'):
@@ -722,10 +714,10 @@ int ue_input(char *key)
 
     case ctrl('c'):
         /* copy block */
-        if (ue->mark_e != -1) {
+        if (ue.e.mark_e != -1) {
             /* alloc space into clipboard */
-            uem.clip_size = ue->mark_e - ue->mark_s;
-            memcpy(uem.clip, &ue->data[ue->mark_s], uem.clip_size);
+            ue.clip_size = ue.e.mark_e - ue.e.mark_s;
+            memcpy(ue.clip, &ue.e.data[ue.e.mark_s], ue.clip_size);
 
             /* cut? delete block */
             if (n)
@@ -736,37 +728,37 @@ int ue_input(char *key)
 
     case ctrl('u'):
         /* unmark selection */
-        ue->mark_s = ue->mark_e = -1;
+        ue.e.mark_s = ue.e.mark_e = -1;
         break;
 
     case ctrl('v'):
         /* paste block */
         ue_snap();
 
-        if (ue_expand(uem.clip_size)) {
-            memcpy(&ue->data[ue->cpos], uem.clip, uem.clip_size);
-            ue->cpos += uem.clip_size;
+        if (ue_expand(ue.clip_size)) {
+            memcpy(&ue.e.data[ue.e.cpos], ue.clip, ue.clip_size);
+            ue.e.cpos += ue.clip_size;
         }
 
         break;
 
     case ctrl('b'):
         /* mark beginning / end of selection */
-        if (ue->mark_s == -1)
-            ue->mark_s = ue->cpos;
+        if (ue.e.mark_s == -1)
+            ue.e.mark_s = ue.e.cpos;
         else
-        if (ue->mark_e == -1)
-            ue->mark_e = ue->cpos;
+        if (ue.e.mark_e == -1)
+            ue.e.mark_e = ue.e.cpos;
 
         break;
 
     case ctrl('q'):
         /* quit (if not modified) */
-        if (ue->modified) {
-            if (uem.refuse_quit == 2)
+        if (ue.e.modified) {
+            if (ue.refuse_quit == 2)
                 running = 0;
             else
-                uem.refuse_quit = 1;
+                ue.refuse_quit = 1;
         }
         else
             running = 0;
@@ -777,16 +769,16 @@ int ue_input(char *key)
         /* delete line */
         ue_snap();
 
-        ue->cpos = ue_find_col_0(ue->cpos);
-        ue_delete(ue_row_size(ue->cpos) + 1);
+        ue.e.cpos = ue_find_col_0(ue.e.cpos);
+        ue_delete(ue_row_size(ue.e.cpos) + 1);
         break;
 
     case '\177':
         /* backspace */
-        if (ue->cpos == 0)
+        if (ue.e.cpos == 0)
             break;
 
-        ue->cpos--;
+        ue.e.cpos--;
 
         /* fall through */
 
@@ -808,9 +800,7 @@ int ue_input(char *key)
 
     case '\t':
         /* tab */
-        ue_snap();
-
-        n = TAB_SIZE - (ue->cpos - ue_find_col_0(ue->cpos)) % TAB_SIZE;
+        n = TAB_SIZE - (ue.e.cpos - ue_find_col_0(ue.e.cpos)) % TAB_SIZE;
         while (n--)
             ue_insert(' ');
 
@@ -868,7 +858,7 @@ int main(int argc, char *argv[])
     /* main loop */
     for (;;) {
         /* read terminal size, if new or changed */
-        if (uem.sigwinch_received)
+        if (ue.sigwinch_received)
             get_tty_size();
 
         ue_output();
